@@ -1,0 +1,60 @@
+[tool.poetry]
+name = "dagster-pyiceberg"
+version = "0.1.0"
+description = ""
+authors = ["Jasper Ginn <jasperginn@gmail.com>"]
+readme = "README.md"
+packages = [{ include = "dagster_pyiceberg", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.10,<4.0"
+pyiceberg = "^0.7.1"
+
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.8.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+exclude = '''
+^/(
+  (
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.venv
+    | _build
+    | build
+    | dist
+    | .notebooks
+    | .nox
+  )
+)
+'''
+
+[tool.isort]
+profile = "black"
+extend_skip = [".notebooks", ".nox", ".venv"]
+
+[tool.mypy]
+exclude = "^.notebooks/"
+ignore_missing_imports = true
+
+[tool.bandit]
+skips = ['B101']
+
+[tool.ruff]
+ignore = ["E501"]
+extend-exclude = [
+  "__pycache__",
+  "docs",
+  "site",
+  ".nox",
+  ".notebooks"
+]
+
