@@ -5,6 +5,7 @@ from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
 from pyiceberg import expressions as E
 from pyiceberg import table as iceberg_table
+from pyiceberg import transforms
 from pyiceberg.catalog.sql import SqlCatalog
 
 from dagster_pyiceberg import handler
@@ -138,3 +139,11 @@ def test_table_reader_with_selected_columns(
     assert df.shape[0] == 1440
     assert df.shape[1] == 1
     assert df.columns == ["value"]
+
+
+def test_diff_to_transformation():
+    transformation = handler.diff_to_transformation(
+        start=dt.datetime(2023, 1, 1, 0, 0, 0),
+        end=dt.datetime(2023, 1, 1, 1, 0, 0),
+    )
+    assert transformation == transforms.DayTransform()
