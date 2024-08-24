@@ -66,7 +66,33 @@ def create_catalog_table_partitioned(
         f"{namespace}.data_partitioned", schema=schema
     )
     with partitioned_table.update_spec() as update:
-        update.add_field(source_column_name="timestamp", transform=T.HourTransform())
+        update.add_field(
+            source_column_name="timestamp",
+            transform=T.HourTransform(),
+            partition_field_name="timestamp",
+        )
+        update.add_field(
+            source_column_name="category",
+            transform=T.IdentityTransform(),
+            partition_field_name="category",
+        )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def add_data_to_table(
+    catalog: SqlCatalog, create_catalog_table, namespace: str, data: pa.Table
+):
+    catalog.load_table(f"{namespace}.data").append(data)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def add_data_to_partitioned_table(
+    catalog: SqlCatalog,
+    create_catalog_table_partitioned,
+    namespace: str,
+    data: pa.Table,
+):
+    catalog.load_table(f"{namespace}.data_partitioned").append(data)
 
 
 @pytest.fixture

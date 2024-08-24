@@ -10,7 +10,7 @@ from dagster._core.storage.db_io_manager import (
 )
 from pyiceberg import catalog
 from pyiceberg import expressions as E
-from pyiceberg import schema, table
+from pyiceberg import partitioning, schema, table
 from pyiceberg import types as T
 
 U = TypeVar("U")
@@ -58,19 +58,26 @@ def _partition_filter(table_partition: TablePartitionDimension):
 
 
 def partition_dimensions_to_filters(
-    partition_dimensions: Iterable[TablePartitionDimension], table_schema: schema.Schema
+    partition_dimensions: Iterable[TablePartitionDimension],
+    table_schema: schema.Schema,
+    table_partition_spec: partitioning.PartitionSpec,
 ):
     """Converts dagster partitions to iceberg filters"""
     partition_filters = []
+    partition_spec_fields = [t.name for t in table_partition_spec.fields]
     for partition_dimension in partition_dimensions:
         field = table_schema.find_field(partition_dimension.partition_expr)
+        if field.name not in partition_spec_fields:
+            raise ValueError(
+                f"Table is not partitioned by field '{field.name}'. Available partition fields: {table_partition_spec.fields}"
+            )
         # NB: add timestamp tz type and time type
         if isinstance(field.field_type, time_partition_dt_types):
             filter_ = _time_window_partition_filter(table_partition=partition_dimension)
         elif isinstance(field.field_type, partition_types):
             filter_ = _partition_filter(table_partition=partition_dimension)
         else:
-            raise NotImplementedError(
+            raise ValueError(
                 f"Partitioning by field type '{str(field.field_type)}' not supported"
             )
         partition_filters.append(filter_)
@@ -88,7 +95,11 @@ def _table_reader(
         partition_filters = partition_dimensions_to_filters(
             partition_dimensions=table_slice.partition_dimensions,
             table_schema=table.schema(),
+            table_partition_spec=table.spec(),
         )
-        table = table.scan(E.And(*partition_filters))
+        if len(partition_filters) > 1:
+            table = table.scan(E.And(*partition_filters))
+        else:
+            table = table.scan(partition_filters[0])
 
     return table

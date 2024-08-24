@@ -2,9 +2,10 @@ import datetime as dt
 
 import pytest
 from dagster._core.definitions.time_window_partitions import TimeWindow
-from dagster._core.storage.db_io_manager import TablePartitionDimension
+from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
 from pyiceberg import expressions as E
 from pyiceberg import table as iceberg_table
+from pyiceberg.catalog.sql import SqlCatalog
 
 from dagster_pyiceberg import handler
 
@@ -26,6 +27,26 @@ def category_table_partition_dimension() -> TablePartitionDimension:
     return TablePartitionDimension("category", ["A"])
 
 
+@pytest.fixture()
+def category_table_partition_dimension_multiple() -> TablePartitionDimension:
+    return TablePartitionDimension("category", ["A", "B"])
+
+
+@pytest.fixture()
+def table_slice(
+    datetime_table_partition_dimension: TablePartitionDimension,
+    category_table_partition_dimension: TablePartitionDimension,
+) -> TableSlice:
+    return TableSlice(
+        table="data",
+        schema="pytest",
+        partition_dimensions=[
+            datetime_table_partition_dimension,
+            category_table_partition_dimension,
+        ],
+    )
+
+
 def test_time_window_partition_filter(
     datetime_table_partition_dimension: TablePartitionDimension,
 ):
@@ -43,17 +64,26 @@ def test_partition_filter(category_table_partition_dimension: TablePartitionDime
     assert filter_ == expected_filter
 
 
+def test_partition_filter_fails_with_multiple(
+    category_table_partition_dimension_multiple: TablePartitionDimension,
+):
+    category_table_partition_dimension.partitions = ["A", "B"]
+    with pytest.raises(NotImplementedError):
+        handler._partition_filter(category_table_partition_dimension)
+
+
 def test_partition_dimensions_to_filters(
     datetime_table_partition_dimension: TablePartitionDimension,
     category_table_partition_dimension: TablePartitionDimension,
-    table: iceberg_table.Table,
+    table_partitioned: iceberg_table.Table,
 ):
     filters = handler.partition_dimensions_to_filters(
         partition_dimensions=[
             datetime_table_partition_dimension,
             category_table_partition_dimension,
         ],
-        table_schema=table.schema(),
+        table_schema=table_partitioned.schema(),
+        table_partition_spec=table_partitioned.spec(),
     )
     expected_filters = [
         E.And(
@@ -63,3 +93,11 @@ def test_partition_dimensions_to_filters(
         E.EqualTo("category", "A"),
     ]
     assert filters == expected_filters
+
+
+def test_table_reader(catalog: SqlCatalog, table_slice: TableSlice):
+    table_ = handler._table_reader(table_slice, catalog)
+    df = table_.to_pandas()
+    assert df["timestamp"].min() >= dt.datetime(2023, 1, 1, 0)
+    assert df["timestamp"].max() < dt.datetime(2023, 1, 1, 1)
+    assert df["category"].unique().tolist() == ["A"]
