@@ -1,7 +1,9 @@
 import datetime as dt
 from abc import abstractmethod
-from typing import Generic, Iterable, Sequence, TypeVar, cast
+from typing import Any, Dict, Generic, Iterable, Sequence, Tuple, TypeVar, Union, cast
 
+import pyarrow as pa
+from dagster import InputContext, OutputContext
 from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.storage.db_io_manager import (
     DbTypeHandler,
@@ -20,22 +22,32 @@ U = TypeVar("U")
 time_partition_dt_types = (T.TimestampType, T.DateType)
 partition_types = T.StringType
 
+ArrowTypes = Union[pa.Table, pa.RecordBatchReader]
+
 
 class IcebergTypeHandler(DbTypeHandler[U], Generic[U]):
 
     @abstractmethod
-    def from_arrow(self): ...
+    def from_arrow(self, obj: table.DataScan, target_type: type): ...
 
     @abstractmethod
-    def to_arrow(self): ...
+    def to_arrow(self, obj: U) -> Tuple[pa.RecordBatchReader, Dict[str, Any]]: ...
 
-    def handle_output(self):
+    def handle_output(self, context: OutputContext):
         """Stores pyarrow types in Iceberg table"""
         ...
 
-    def load_input(self):
+    def load_input(
+        self,
+        context: InputContext,
+        table_slice: TableSlice,
+        catalog: catalog.MetastoreCatalog,
+    ) -> U:
         """Loads the input as a pyarrow Table"""
-        ...
+        return self.from_arrow(
+            _table_reader(table_slice=table_slice, catalog=catalog),
+            context.dagster_type.typing_type,
+        )
 
 
 def _time_window_partition_filter(table_partition: TablePartitionDimension):
