@@ -10,7 +10,9 @@ from dagster._core.storage.db_io_manager import (
 )
 from pyiceberg import catalog
 from pyiceberg import expressions as E
-from pyiceberg import partitioning, schema, table
+from pyiceberg import partitioning, schema
+from pyiceberg import table
+from pyiceberg import table as iceberg_table
 from pyiceberg import types as T
 
 U = TypeVar("U")
@@ -108,18 +110,19 @@ def _table_reader(
     table_name = f"{table_slice.schema}.{table_slice.table}"
     table = catalog.load_table(table_name)
 
+    selected_fields = table_slice.columns if table_slice.columns is not None else ("*",)
     if table_slice.partition_dimensions is not None:
         partition_filters = partition_dimensions_to_filters(
             partition_dimensions=table_slice.partition_dimensions,
             table_schema=table.schema(),
             table_partition_spec=table.spec(),
         )
-        table = (
-            table.scan(E.And(*partition_filters))
+        row_filter = (
+            E.And(*partition_filters)
             if len(partition_filters) > 1
-            else table.scan(partition_filters[0])
+            else partition_filters[0]
         )
     else:
-        table = table.scan()
+        row_filter = iceberg_table.ALWAYS_TRUE
 
-    return table
+    return table.scan(row_filter=row_filter, selected_fields=selected_fields)

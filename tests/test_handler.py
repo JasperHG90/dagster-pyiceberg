@@ -56,6 +56,16 @@ def table_slice() -> TableSlice:
     )
 
 
+@pytest.fixture()
+def table_slice_with_selected_columns() -> TableSlice:
+    return TableSlice(
+        table="data",
+        schema="pytest",
+        partition_dimensions=None,
+        columns=["value"],
+    )
+
+
 def test_time_window_partition_filter(
     datetime_table_partition_dimension: TablePartitionDimension,
 ):
@@ -118,3 +128,13 @@ def test_table_reader(catalog: SqlCatalog, table_slice: TableSlice):
     table_ = handler._table_reader(table_slice, catalog)
     df = table_.to_pandas()
     assert df.shape[0] == 1440
+
+
+def test_table_reader_with_selected_columns(
+    catalog: SqlCatalog, table_slice_with_selected_columns: TableSlice
+):
+    table_ = handler._table_reader(table_slice_with_selected_columns, catalog)
+    df = table_.to_pandas()
+    assert df.shape[0] == 1440
+    assert df.shape[1] == 1
+    assert df.columns == ["value"]
