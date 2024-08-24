@@ -8,13 +8,13 @@ from pyiceberg import transforms as T
 from pyiceberg.catalog.sql import SqlCatalog
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def warehouse_path(tmp_path_factory) -> str:
     dir = tmp_path_factory.mktemp("warehouse")
     return str(dir)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def catalog(warehouse_path: str) -> SqlCatalog:
     return SqlCatalog(
         "default",
@@ -25,7 +25,7 @@ def catalog(warehouse_path: str) -> SqlCatalog:
     )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def namespace(catalog: SqlCatalog) -> str:
     catalog.create_namespace("pytest")
     return "pytest"
