@@ -69,7 +69,7 @@ def partition_dimensions_to_filters(
         field = table_schema.find_field(partition_dimension.partition_expr)
         if field.name not in partition_spec_fields:
             raise ValueError(
-                f"Table is not partitioned by field '{field.name}'. Available partition fields: {table_partition_spec.fields}"
+                f"Table is not partitioned by field '{field.name}'. Available partition fields: {partition_spec_fields}"
             )
         # NB: add timestamp tz type and time type
         if isinstance(field.field_type, time_partition_dt_types):
@@ -97,9 +97,10 @@ def _table_reader(
             table_schema=table.schema(),
             table_partition_spec=table.spec(),
         )
-        if len(partition_filters) > 1:
-            table = table.scan(E.And(*partition_filters))
-        else:
-            table = table.scan(partition_filters[0])
+        table = (
+            table.scan(E.And(*partition_filters))
+            if len(partition_filters) > 1
+            else table.scan(partition_filters[0])
+        )
 
     return table
