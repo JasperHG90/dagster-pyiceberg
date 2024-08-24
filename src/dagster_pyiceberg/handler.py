@@ -54,7 +54,7 @@ def _partition_filter(table_partition: TablePartitionDimension):
         raise NotImplementedError(
             f"Array partition values are not yet supported: '{str(T.StringType)}' / {partition}"
         )
-    return E.EqualTo(table_partition.partition_expr, table_partition.partitions)
+    return E.EqualTo(table_partition.partition_expr, table_partition.partitions[0])
 
 
 def partition_dimensions_to_filters(
