@@ -33,7 +33,13 @@ class IcebergTypeHandler(DbTypeHandler[U], Generic[U]):
     @abstractmethod
     def to_arrow(self, obj: U) -> Tuple[pa.RecordBatchReader, Dict[str, Any]]: ...
 
-    def handle_output(self, context: OutputContext):
+    def handle_output(
+        self,
+        context: OutputContext,
+        table_slice: TableSlice,
+        obj: U,
+        catalog: catalog.MetastoreCatalog,
+    ):
         """Stores pyarrow types in Iceberg table"""
         ...
 
