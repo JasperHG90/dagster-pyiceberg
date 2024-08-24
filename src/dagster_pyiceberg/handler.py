@@ -57,6 +57,21 @@ def _partition_filter(table_partition: TablePartitionDimension):
     return E.EqualTo(table_partition.partition_expr, table_partition.partitions[0])
 
 
+def map_partition_spec_to_fields(
+    partition_spec: partitioning.PartitionSpec, table_schema: schema.Schema
+):
+    """Maps partition spec to fields"""
+    partition_spec_fields = {}
+    for field in partition_spec.fields:
+        field_name = [
+            column.name
+            for column in table_schema.fields
+            if column.field_id == field.source_id
+        ][0]
+        partition_spec_fields[field.source_id] = field_name
+    return partition_spec_fields
+
+
 def partition_dimensions_to_filters(
     partition_dimensions: Iterable[TablePartitionDimension],
     table_schema: schema.Schema,
@@ -64,12 +79,14 @@ def partition_dimensions_to_filters(
 ):
     """Converts dagster partitions to iceberg filters"""
     partition_filters = []
-    partition_spec_fields = [t.name for t in table_partition_spec.fields]
+    partition_spec_fields = map_partition_spec_to_fields(
+        partition_spec=table_partition_spec, table_schema=table_schema
+    )
     for partition_dimension in partition_dimensions:
         field = table_schema.find_field(partition_dimension.partition_expr)
-        if field.name not in partition_spec_fields:
+        if field.field_id not in partition_spec_fields.keys():
             raise ValueError(
-                f"Table is not partitioned by field '{field.name}'. Available partition fields: {partition_spec_fields}"
+                f"Table is not partitioned by field '{field.name}' with id '{field.field_id}'. Available partition fields: {partition_spec_fields}"
             )
         # NB: add timestamp tz type and time type
         if isinstance(field.field_type, time_partition_dt_types):
@@ -102,5 +119,7 @@ def _table_reader(
             if len(partition_filters) > 1
             else table.scan(partition_filters[0])
         )
+    else:
+        table = table.scan()
 
     return table

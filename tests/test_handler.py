@@ -33,17 +33,26 @@ def category_table_partition_dimension_multiple() -> TablePartitionDimension:
 
 
 @pytest.fixture()
-def table_slice(
+def partitioned_table_slice(
     datetime_table_partition_dimension: TablePartitionDimension,
     category_table_partition_dimension: TablePartitionDimension,
 ) -> TableSlice:
     return TableSlice(
-        table="data",
+        table="data_partitioned",
         schema="pytest",
         partition_dimensions=[
             datetime_table_partition_dimension,
             category_table_partition_dimension,
         ],
+    )
+
+
+@pytest.fixture()
+def table_slice() -> TableSlice:
+    return TableSlice(
+        table="data",
+        schema="pytest",
+        partition_dimensions=None,
     )
 
 
@@ -95,9 +104,17 @@ def test_partition_dimensions_to_filters(
     assert filters == expected_filters
 
 
-def test_table_reader(catalog: SqlCatalog, table_slice: TableSlice):
-    table_ = handler._table_reader(table_slice, catalog)
+def test_partitioned_table_reader(
+    catalog: SqlCatalog, partitioned_table_slice: TableSlice
+):
+    table_ = handler._table_reader(partitioned_table_slice, catalog)
     df = table_.to_pandas()
     assert df["timestamp"].min() >= dt.datetime(2023, 1, 1, 0)
     assert df["timestamp"].max() < dt.datetime(2023, 1, 1, 1)
     assert df["category"].unique().tolist() == ["A"]
+
+
+def test_table_reader(catalog: SqlCatalog, table_slice: TableSlice):
+    table_ = handler._table_reader(table_slice, catalog)
+    df = table_.to_pandas()
+    assert df.shape[0] == 1440
