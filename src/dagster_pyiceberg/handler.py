@@ -72,51 +72,7 @@ class IcebergTypeHandler(DbTypeHandler[U], Generic[U]):
         metadata = context.definition_metadata or {}  # noqa
         data = self.to_arrow(obj)
 
-        table_path = f"{table_slice.schema}.{table_slice.table}"
-
-        if catalog.table_exists(table_path):
-            table = catalog.load_table(table_path)
-        else:
-            table = catalog.create_table(
-                table_path,
-                schema=data.schema,
-            )
-            # This is a bit tricky, we need to add partition columns to the table schema
-            #  and these need transforms
-            # We can base them on the partition dimensions, but optionally we can allow users
-            #  to pass these as metadata to the asset
-            if table_slice.partition_dimensions is not None:
-                with table.update() as update:
-                    for partition in table_slice.partition_dimensions:
-                        if isinstance(partition.partitions, TimeWindow):
-                            transform = diff_to_transformation(*partition.partitions)
-                        else:
-                            transform = transforms.IdentityTransform()
-                        update.add_field(partition.partition_expr, transform=transform)
-
-        if table_slice.partition_dimensions is not None:
-            partition_filters = partition_dimensions_to_filters(
-                partition_dimensions=table_slice.partition_dimensions,
-                table_schema=table.schema(),
-                table_partition_spec=table.spec(),
-            )
-            row_filter = (
-                E.And(*partition_filters)
-                if len(partition_filters) > 1
-                else partition_filters[0]
-            )
-        else:
-            row_filter = iceberg_table.ALWAYS_TRUE
-
-        # An overwrite may produce zero or more snapshots based on the operation:
-
-        #  DELETE: In case existing Parquet files can be dropped completely.
-        #  REPLACE: In case existing Parquet files need to be rewritten.
-        #  APPEND: In case new data is being inserted into the table.
-        table.overwrite(
-            df=data,
-            overwrite_filter=row_filter,
-        )
+        _table_writer(table_slice=table_slice, data=data, catalog=catalog)
 
     def load_input(
         self,
@@ -129,6 +85,55 @@ class IcebergTypeHandler(DbTypeHandler[U], Generic[U]):
             _table_reader(table_slice=table_slice, catalog=catalog),
             context.dagster_type.typing_type,
         )
+
+
+def _table_writer(
+    table_slice: TableSlice, data: ArrowTypes, catalog: catalog.MetastoreCatalog
+):
+    table_path = f"{table_slice.schema}.{table_slice.table}"
+    if catalog.table_exists(table_path):
+        table = catalog.load_table(table_path)
+    else:
+        table = catalog.create_table(
+            table_path,
+            schema=data.schema,
+        )
+        # This is a bit tricky, we need to add partition columns to the table schema
+        #  and these need transforms
+        # We can base them on the partition dimensions, but optionally we can allow users
+        #  to pass these as metadata to the asset
+        if table_slice.partition_dimensions is not None:
+            with table.update() as update:
+                for partition in table_slice.partition_dimensions:
+                    if isinstance(partition.partitions, TimeWindow):
+                        transform = diff_to_transformation(*partition.partitions)
+                    else:
+                        transform = transforms.IdentityTransform()
+                    update.add_field(partition.partition_expr, transform=transform)
+
+    if table_slice.partition_dimensions is not None:
+        partition_filters = partition_dimensions_to_filters(
+            partition_dimensions=table_slice.partition_dimensions,
+            table_schema=table.schema(),
+            table_partition_spec=table.spec(),
+        )
+        row_filter = (
+            E.And(*partition_filters)
+            if len(partition_filters) > 1
+            else partition_filters[0]
+        )
+    else:
+        row_filter = iceberg_table.ALWAYS_TRUE
+
+    # An overwrite may produce zero or more snapshots based on the operation:
+
+    #  DELETE: In case existing Parquet files can be dropped completely.
+    #  REPLACE: In case existing Parquet files need to be rewritten.
+    #  APPEND: In case new data is being inserted into the table.
+    table.overwrite(
+        df=data,
+        overwrite_filter=row_filter,
+    )
 
 
 def _time_window_partition_filter(table_partition: TablePartitionDimension):
