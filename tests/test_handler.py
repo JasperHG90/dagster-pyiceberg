@@ -1,5 +1,6 @@
 import datetime as dt
 
+import pyarrow as pa
 import pytest
 from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
@@ -147,3 +148,34 @@ def test_diff_to_transformation():
         end=dt.datetime(2023, 1, 1, 1, 0, 0),
     )
     assert transformation == transforms.DayTransform()
+
+
+def test_table_writer(catalog: SqlCatalog, data: pa.Table):
+    handler._table_writer(
+        table_slice=TableSlice(
+            table="data_table_writer",
+            schema="pytest",
+            partition_dimensions=None,
+        ),
+        data=data,
+        catalog=catalog,
+    )
+    assert catalog.table_exists("pytest.data_table_writer")
+
+
+def test_table_writer_partitioned(catalog: SqlCatalog, data: pa.Table):
+    handler._table_writer(
+        table_slice=TableSlice(
+            table="data_table_writer_partitioned",
+            schema="pytest",
+            partition_dimensions=[
+                TablePartitionDimension(
+                    "timestamp",
+                    TimeWindow(dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1)),
+                ),
+            ],
+        ),
+        data=data,
+        catalog=catalog,
+    )
+    table = catalog.load_table("pytest.data_table_writer_partitioned")  # noqa

@@ -103,7 +103,7 @@ def _table_writer(
         # We can base them on the partition dimensions, but optionally we can allow users
         #  to pass these as metadata to the asset
         if table_slice.partition_dimensions is not None:
-            with table.update() as update:
+            with table.update_spec() as update:
                 for partition in table_slice.partition_dimensions:
                     if isinstance(partition.partitions, TimeWindow):
                         transform = diff_to_transformation(*partition.partitions)
