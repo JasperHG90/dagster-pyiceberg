@@ -1,6 +1,7 @@
 import datetime as dt
 
 import pyarrow as pa
+import pyarrow.compute as pc
 import pytest
 from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
@@ -66,6 +67,36 @@ def table_slice_with_selected_columns() -> TableSlice:
         partition_dimensions=None,
         columns=["value"],
     )
+
+
+@pytest.fixture(scope="module")
+def create_catalog_table_partitioned_update(
+    catalog: SqlCatalog, namespace: str, schema: pa.Schema
+):
+    partitioned_table = catalog.create_table(
+        f"{namespace}.data_partitioned_update", schema=schema
+    )
+    with partitioned_table.update_spec() as update:
+        update.add_field(
+            source_column_name="timestamp",
+            transform=transforms.HourTransform(),
+            partition_field_name="timestamp",
+        )
+        update.add_field(
+            source_column_name="category",
+            transform=transforms.IdentityTransform(),
+            partition_field_name="category",
+        )
+
+
+@pytest.fixture(scope="module")
+def add_data_to_table(
+    catalog: SqlCatalog,
+    create_catalog_table_partitioned_update,
+    namespace: str,
+    data: pa.Table,
+):
+    catalog.load_table(f"{namespace}.data_partitioned_update").append(data)
 
 
 def test_time_window_partition_filter(
@@ -164,6 +195,12 @@ def test_table_writer(catalog: SqlCatalog, data: pa.Table):
 
 
 def test_table_writer_partitioned(catalog: SqlCatalog, data: pa.Table):
+    # Works similar to # https://docs.dagster.io/integrations/deltalake/reference#storing-multi-partitioned-assets
+    # Need to subset the data.
+    data = data.filter(
+        (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
+        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1))
+    )
     handler._table_writer(
         table_slice=TableSlice(
             table="data_table_writer_partitioned",
@@ -178,4 +215,86 @@ def test_table_writer_partitioned(catalog: SqlCatalog, data: pa.Table):
         data=data,
         catalog=catalog,
     )
-    table = catalog.load_table("pytest.data_table_writer_partitioned")  # noqa
+    table = catalog.load_table("pytest.data_table_writer_partitioned")
+    partition_field_names = [f.name for f in table.spec().fields]
+    assert partition_field_names == ["timestamp_hour"]
+    assert len(table.scan().to_arrow().to_pydict()["value"]) == 60
+
+
+def test_table_writer_multi_partitioned(catalog: SqlCatalog, data: pa.Table):
+    # Works similar to # https://docs.dagster.io/integrations/deltalake/reference#storing-multi-partitioned-assets
+    # Need to subset the data.
+    data = data.filter(
+        (pc.field("category") == "A")
+        & (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
+        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1))
+    )
+    handler._table_writer(
+        table_slice=TableSlice(
+            table="data_table_writer_partitioned",
+            schema="pytest",
+            partition_dimensions=[
+                TablePartitionDimension(
+                    "timestamp",
+                    TimeWindow(dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1)),
+                ),
+                TablePartitionDimension(
+                    "category",
+                    ["A"],
+                ),
+            ],
+        ),
+        data=data,
+        catalog=catalog,
+    )
+    table = catalog.load_table("pytest.data_table_writer_partitioned")
+    partition_field_names = [f.name for f in table.spec().fields]
+    assert partition_field_names == ["timestamp_hour", "category"]
+    assert len(table.scan().to_arrow().to_pydict()["value"]) == 17
+
+
+def test_table_writer_multi_partitioned_update(
+    catalog: SqlCatalog, data: pa.Table, add_data_to_table
+):
+    # Works similar to # https://docs.dagster.io/integrations/deltalake/reference#storing-multi-partitioned-assets
+    # Need to subset the data.
+    data = data.filter(
+        (pc.field("category") == "A")
+        & (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
+        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1))
+    ).to_pydict()
+    data["value"] = pa.array([10.0] * len(data["value"]))
+    data = pa.Table.from_pydict(data)
+    handler._table_writer(
+        table_slice=TableSlice(
+            table="data_partitioned_update",
+            schema="pytest",
+            partition_dimensions=[
+                TablePartitionDimension(
+                    "timestamp",
+                    TimeWindow(dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1)),
+                ),
+                TablePartitionDimension(
+                    "category",
+                    ["A"],
+                ),
+            ],
+        ),
+        data=data,
+        catalog=catalog,
+    )
+    table = catalog.load_table("pytest.data_partitioned_update")
+    data_out = (
+        table.scan(
+            E.And(
+                E.And(
+                    E.GreaterThanOrEqual("timestamp", "2023-01-01T00:00:00"),
+                    E.LessThan("timestamp", "2023-01-01T01:00:00"),
+                ),
+                E.EqualTo("category", "A"),
+            )
+        )
+        .to_arrow()
+        .to_pydict()
+    )
+    assert all([v == 10 for v in data_out["value"]])

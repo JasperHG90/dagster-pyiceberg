@@ -11,7 +11,7 @@ from pyiceberg.catalog.sql import SqlCatalog
 @pytest.fixture(scope="session", autouse=True)
 def warehouse_path(tmp_path_factory) -> str:
     dir = tmp_path_factory.mktemp("warehouse")
-    return str(dir)
+    return str(dir.resolve())
 
 
 @pytest.fixture(scope="session", autouse=True)
