@@ -43,7 +43,7 @@ def diff_to_transformation(
         case 24:
             return transforms.DayTransform()
         case 168:
-            return transforms.DayTransform()
+            return transforms.DayTransform()  # No week transform available
         case _:
             if delta.in_months() == 1:
                 return transforms.MonthTransform()

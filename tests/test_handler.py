@@ -173,12 +173,45 @@ def test_table_reader_with_selected_columns(
     assert df.columns == ["value"]
 
 
-def test_diff_to_transformation():
+@pytest.mark.parametrize(
+    "start, end, expected_transformation",
+    [
+        (
+            dt.datetime(2023, 1, 1, 0, 0, 0),
+            dt.datetime(2023, 1, 1, 1, 0, 0),
+            transforms.HourTransform(),
+        ),
+        (
+            dt.datetime(2023, 1, 1, 0, 0, 0),
+            dt.datetime(2023, 1, 2, 0, 0, 0),
+            transforms.DayTransform(),
+        ),
+        (
+            dt.datetime(2023, 1, 1, 0, 0, 0),
+            dt.datetime(2023, 1, 8, 0, 0, 0),
+            transforms.DayTransform(),
+        ),
+        (
+            dt.datetime(2023, 1, 1, 0, 0, 0),
+            dt.datetime(2023, 2, 1, 0, 0, 0),
+            transforms.MonthTransform(),
+        ),
+    ],
+)
+def test_diff_to_transformation(start, end, expected_transformation):
     transformation = handler.diff_to_transformation(
-        start=dt.datetime(2023, 1, 1, 0, 0, 0),
-        end=dt.datetime(2023, 1, 1, 1, 0, 0),
+        start=start,
+        end=end,
     )
-    assert transformation == transforms.DayTransform()
+    assert transformation == expected_transformation
+
+
+def test_diff_to_transformation_fails():
+    with pytest.raises(NotImplementedError):
+        handler.diff_to_transformation(
+            start=dt.datetime(2023, 1, 1, 0, 0, 0),
+            end=dt.datetime(2023, 1, 1, 0, 0, 1),
+        )
 
 
 def test_table_writer(catalog: SqlCatalog, data: pa.Table):
