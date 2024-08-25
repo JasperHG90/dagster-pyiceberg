@@ -1,6 +1,6 @@
 import datetime as dt
 from abc import abstractmethod
-from typing import Generic, Iterable, Optional, Sequence, TypeVar, Union, cast
+from typing import Generic, Iterable, Optional, Sequence, Type, TypeVar, Union, cast
 
 import pendulum
 import pyarrow as pa
@@ -53,7 +53,7 @@ def diff_to_transformation(
                 )
 
 
-class IcebergTypeHandler(DbTypeHandler[U], Generic[U]):
+class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
 
     @abstractmethod
     def from_arrow(self, obj: table.DataScan, target_type: type): ...
@@ -85,6 +85,23 @@ class IcebergTypeHandler(DbTypeHandler[U], Generic[U]):
             _table_reader(table_slice=table_slice, catalog=catalog),
             context.dagster_type.typing_type,
         )
+
+
+class IcebergPyArrowTypeHandler(IcebergBaseTypeHandler[ArrowTypes]):
+    def from_arrow(
+        self, obj: table.DataScan, target_type: Type[ArrowTypes]
+    ) -> ArrowTypes:
+        if target_type == pa.Table:
+            return obj.to_arrow()
+        else:
+            return obj.to_arrow_batch_reader()
+
+    def to_arrow(self, obj: ArrowTypes) -> pa.Table:
+        return obj
+
+    @property
+    def supported_types(self) -> Sequence[Type[object]]:
+        return (pa.Table, pa.RecordBatchReader)
 
 
 def _table_writer(
