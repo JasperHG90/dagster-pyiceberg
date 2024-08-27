@@ -264,7 +264,7 @@ def test_table_writer_multi_partitioned(catalog: SqlCatalog, data: pa.Table):
     )
     handler._table_writer(
         table_slice=TableSlice(
-            table="data_table_writer_partitioned",
+            table="data_table_writer_multi_partitioned",
             schema="pytest",
             partition_dimensions=[
                 TablePartitionDimension(
@@ -280,15 +280,13 @@ def test_table_writer_multi_partitioned(catalog: SqlCatalog, data: pa.Table):
         data=data,
         catalog=catalog,
     )
-    table = catalog.load_table("pytest.data_table_writer_partitioned")
+    table = catalog.load_table("pytest.data_table_writer_multi_partitioned")
     partition_field_names = [f.name for f in table.spec().fields]
     assert partition_field_names == ["timestamp_hour", "category"]
     assert len(table.scan().to_arrow().to_pydict()["value"]) == 17
 
 
-def test_table_writer_multi_partitioned_update(
-    catalog: SqlCatalog, data: pa.Table, add_data_to_table
-):
+def test_table_writer_multi_partitioned_update(catalog: SqlCatalog, data: pa.Table):
     # Works similar to # https://docs.dagster.io/integrations/deltalake/reference#storing-multi-partitioned-assets
     # Need to subset the data.
     data = data.filter(
@@ -300,7 +298,7 @@ def test_table_writer_multi_partitioned_update(
     data = pa.Table.from_pydict(data)
     handler._table_writer(
         table_slice=TableSlice(
-            table="data_partitioned_update",
+            table="data_multi_partitioned_update",
             schema="pytest",
             partition_dimensions=[
                 TablePartitionDimension(
@@ -316,7 +314,7 @@ def test_table_writer_multi_partitioned_update(
         data=data,
         catalog=catalog,
     )
-    table = catalog.load_table("pytest.data_partitioned_update")
+    table = catalog.load_table("pytest.data_multi_partitioned_update")
     data_out = (
         table.scan(
             E.And(
@@ -331,3 +329,6 @@ def test_table_writer_multi_partitioned_update(
         .to_pydict()
     )
     assert all([v == 10 for v in data_out["value"]])
+
+
+# NB: writing table with different partition fields after the first write (e.g. table create with one partition -> table write with two partitions) yields weird results

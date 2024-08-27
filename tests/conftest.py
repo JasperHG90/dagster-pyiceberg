@@ -79,14 +79,14 @@ def create_catalog_table_partitioned(
 
 
 @pytest.fixture(scope="session", autouse=True)
-def add_data_to_table(
+def append_data_to_table(
     catalog: SqlCatalog, create_catalog_table, namespace: str, data: pa.Table
 ):
     catalog.load_table(f"{namespace}.data").append(data)
 
 
 @pytest.fixture(scope="session", autouse=True)
-def add_data_to_partitioned_table(
+def append_data_to_partitioned_table(
     catalog: SqlCatalog,
     create_catalog_table_partitioned,
     namespace: str,
@@ -95,9 +95,9 @@ def add_data_to_partitioned_table(
     catalog.load_table(f"{namespace}.data_partitioned").append(data)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session", autouse=True)
 def table(catalog: SqlCatalog, namespace: str) -> iceberg_table.Table:
-    return catalog.load_table(f"{namespace}.data")
+    catalog.load_table(f"{namespace}.data")
 
 
 @pytest.fixture

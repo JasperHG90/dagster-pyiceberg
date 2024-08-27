@@ -1,4 +1,5 @@
 alias s := setup
+alias t := test
 alias p := pre_commit
 
 # Install python dependencies
@@ -15,3 +16,7 @@ setup: install pre_commit_setup
 # Run pre-commit
 pre_commit:
  uv run pre-commit run -a
+
+# Run pytest
+test:
+  uv run pytest
