@@ -8,26 +8,11 @@ authors = [
 requires-python = ">=3.10,<3.13"
 readme = "README.md"
 dependencies = [
-    "pyiceberg>=0.7.1",
+    "pyiceberg[pyarrow]>=0.7.1",
     "dagster>=1.8.2",
     "dagit>=1.8.2",
     "pendulum>=3.0.0",
 ]
-
-# [tool.poetry.dependencies]
-# python = "^3.10,<3.13"
-# pyiceberg = {extras = ["daft"], version = "^0.7.1"}
-# dagster = "^1.8.2"
-# dagit = "^1.8.2"
-# pandas = "^2.2.2"
-# getdaft = "^0.3.0"
-# pendulum = "^3.0.0"
-
-
-# [tool.poetry.group.dev.dependencies]
-# pre-commit = "^3.8.0"
-# ipykernel = "^6.29.5"
-# pytest = "^8.3.2"
 
 [build-system]
 requires = ["hatchling"]
@@ -78,4 +63,5 @@ dev-dependencies = [
     "pre-commit>=3.8.0",
     "ipykernel>=6.29.5",
     "pytest>=8.3.2",
+    "numpy<=2.0.0",
 ]
