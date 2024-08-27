@@ -1,5 +1,5 @@
-from contextlib import contextmanager
-from typing import Iterator, Sequence, cast
+from contextlib import contextmanager  # noqa
+from typing import Iterator, Sequence, TypedDict, cast  # noqa
 
 from dagster import OutputContext
 from dagster._core.definitions.time_window_partitions import TimeWindow
@@ -11,6 +11,12 @@ from dagster._core.storage.db_io_manager import (
 from pyiceberg.catalog import MetastoreCatalog
 
 from .config import IcebergRestCatalogConfig, IcebergSqlCatalogConfig  # noqa
+
+
+class _IcebergTableIOManagerResourceConfig(TypedDict):
+
+    name: str
+    properties: dict
 
 
 class IcebergDbClient(DbClient):
@@ -41,10 +47,43 @@ class IcebergDbClient(DbClient):
         else:
             return f"""SELECT {col_str} FROM {table_slice.schema}.{table_slice.table}"""
 
-    @staticmethod
-    @contextmanager
-    def connect(context, table_slice: TableSlice) -> Iterator[MetastoreCatalog]:
-        yield None
+    # @staticmethod
+    # @contextmanager
+    # def connect(context, table_slice: TableSlice) -> Iterator[MetastoreCatalog]:
+    #     resource_config = cast(
+    #         _DeltaTableIOManagerResourceConfig, context.resource_config
+    #     )
+    #     root_uri = resource_config["root_uri"].rstrip("/")
+    #     storage_options = resource_config["storage_options"]
+
+    #     if "local" in storage_options:
+    #         storage_options = storage_options["local"]
+    #     elif "s3" in storage_options:
+    #         storage_options = storage_options["s3"]
+    #     elif "azure" in storage_options:
+    #         storage_options = storage_options["azure"]
+    #     elif "gcs" in storage_options:
+    #         storage_options = storage_options["gcs"]
+    #     else:
+    #         storage_options = {}
+
+    # client_options = resource_config.get("client_options")
+    # client_options = client_options or {}
+
+    # storage_options = {
+    #     **{k: str(v) for k, v in storage_options.items() if v is not None},
+    #     **{k: str(v) for k, v in client_options.items() if v is not None},
+    # }
+    # table_config = resource_config.get("table_config")
+    # table_uri = f"{root_uri}/{table_slice.schema}/{table_slice.table}"
+
+    # conn = TableConnection(
+    #     table_uri=table_uri,
+    #     storage_options=storage_options or {},
+    #     table_config=table_config,
+    # )
+
+    # yield conn
 
 
 def _partition_where_clause(

@@ -3,15 +3,15 @@ alias p := pre_commit
 
 # Install python dependencies
 install:
-  poetry install
+  uv sync
 
 # Install pre-commit hooks
 pre_commit_setup:
-  poetry run pre-commit install
+  uv run pre-commit install
 
 # Install python dependencies and pre-commit hooks
 setup: install pre_commit_setup
 
 # Run pre-commit
 pre_commit:
-  poetry run pre-commit run -a
+ uv run pre-commit run -a

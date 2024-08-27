@@ -1,29 +1,37 @@
-[tool.poetry]
+[project]
 name = "dagster-pyiceberg"
 version = "0.1.0"
 description = ""
-authors = ["Jasper Ginn <jasperginn@gmail.com>"]
+authors = [
+  {name="Jasper Ginn", email="jasperginn@gmail.com"}
+]
+requires-python = ">=3.10,<3.13"
 readme = "README.md"
-packages = [{ include = "dagster_pyiceberg", from = "src" }]
+dependencies = [
+    "pyiceberg>=0.7.1",
+    "dagster>=1.8.2",
+    "dagit>=1.8.2",
+    "pendulum>=3.0.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.10,<3.13"
-pyiceberg = {extras = ["daft"], version = "^0.7.1"}
-dagster = "^1.8.2"
-dagit = "^1.8.2"
-pandas = "^2.2.2"
-getdaft = "^0.3.0"
-pendulum = "^3.0.0"
+# [tool.poetry.dependencies]
+# python = "^3.10,<3.13"
+# pyiceberg = {extras = ["daft"], version = "^0.7.1"}
+# dagster = "^1.8.2"
+# dagit = "^1.8.2"
+# pandas = "^2.2.2"
+# getdaft = "^0.3.0"
+# pendulum = "^3.0.0"
 
 
-[tool.poetry.group.dev.dependencies]
-pre-commit = "^3.8.0"
-ipykernel = "^6.29.5"
-pytest = "^8.3.2"
+# [tool.poetry.group.dev.dependencies]
+# pre-commit = "^3.8.0"
+# ipykernel = "^6.29.5"
+# pytest = "^8.3.2"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.black]
 line-length = 88
@@ -56,11 +64,18 @@ ignore_missing_imports = true
 skips = ['B101']
 
 [tool.ruff]
-ignore = ["E501"]
+lint.ignore = ["E501"]
 extend-exclude = [
   "__pycache__",
   "docs",
   "site",
   ".nox",
   ".notebooks"
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pre-commit>=3.8.0",
+    "ipykernel>=6.29.5",
+    "pytest>=8.3.2",
 ]
