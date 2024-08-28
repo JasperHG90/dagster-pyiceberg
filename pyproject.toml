@@ -5,7 +5,7 @@ description = ""
 authors = [
   {name="Jasper Ginn", email="jasperginn@gmail.com"}
 ]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10"
 readme = "README.md"
 dependencies = [
     "pyiceberg[pyarrow]>=0.7.1",
@@ -67,5 +67,5 @@ extend-exclude = [
   ".notebooks"
 ]
 
-[tool.pytest]
+[tool.pytest.ini_options]
 cache_dir = "/home/vscode/workspace/.cache/pytest"
