@@ -23,3 +23,13 @@ class IcebergSqlCatalogConfig(_IcebergCatalogBaseConfig):
 class IcebergRestCatalogConfig(_IcebergCatalogBaseConfig):
 
     type: Literal["rest"]
+
+
+# Options (not yet covered)
+#  Overwrite partition spec (or not)
+#  Update schemas (or fail)
+
+# Metadata (not yet covered)
+#  Sort order (metadata)
+#  Partition_expr mapping s.a. dagster-deltalake (metadata)
+#  Transforms (metadata)

@@ -331,4 +331,43 @@ def test_table_writer_multi_partitioned_update(catalog: SqlCatalog, data: pa.Tab
     assert all([v == 10 for v in data_out["value"]])
 
 
-# NB: writing table with different partition fields after the first write (e.g. table create with one partition -> table write with two partitions) yields weird results
+def test_table_writer_multi_partitioned_update_schema_change(
+    catalog: SqlCatalog, data: pa.Table
+):
+    handler._table_writer(
+        table_slice=TableSlice(
+            table="data_multi_partitioned_update_schema_change",
+            schema="pytest",
+            partition_dimensions=[
+                TablePartitionDimension(
+                    "timestamp",
+                    TimeWindow(dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1)),
+                ),
+            ],
+        ),
+        data=data,
+        catalog=catalog,
+    )
+    data_ = data.filter(
+        (pc.field("category") == "A")
+        & (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
+        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1))
+    )
+    handler._table_writer(
+        table_slice=TableSlice(
+            table="data_multi_partitioned_update_schema_change",
+            schema="pytest",
+            partition_dimensions=[
+                TablePartitionDimension(
+                    "timestamp",
+                    TimeWindow(dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1)),
+                ),
+                TablePartitionDimension(
+                    "category",
+                    ["A"],
+                ),
+            ],
+        ),
+        data=data_,
+        catalog=catalog,
+    )

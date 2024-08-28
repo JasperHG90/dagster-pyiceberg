@@ -108,8 +108,44 @@ def _table_writer(
     table_slice: TableSlice, data: ArrowTypes, catalog: catalog.MetastoreCatalog
 ):
     table_path = f"{table_slice.schema}.{table_slice.table}"
+    update_spec: bool = False
     if catalog.table_exists(table_path):
         table = catalog.load_table(table_path)
+
+        # Check if partitions match. If not, update
+        #  But this should be a configuration option per table
+        if table_slice.partition_dimensions is not None:
+            update_spec = True
+            partition_fields = map_partition_spec_to_fields(
+                partition_spec=table.spec(), table_schema=table.schema()
+            )
+            partition_exprs = [
+                p.partition_expr for p in table_slice.partition_dimensions
+            ]
+            partition_fields_not_set = set(partition_exprs) - set(
+                partition_fields.values()
+            )
+            if len(partition_fields_not_set) > 0:
+                new_partition_dimensions = [
+                    p
+                    for p in table_slice.partition_dimensions
+                    if p.partition_expr in partition_fields_not_set
+                ]
+                with table.update_spec() as update:
+                    for partition in new_partition_dimensions:
+                        if isinstance(partition, TimeWindow):
+                            transform = diff_to_transformation(*partition)
+                        else:
+                            transform = transforms.IdentityTransform()
+                        update.add_field(partition.partition_expr, transform=transform)
+            # See: https://github.com/apache/iceberg-python/issues/1108
+            # We need to partition on the old partition fields when overwriting, not the new partition fields
+            # nb: this won't work if we write multiple slices because not all slices are updated
+            partition_dimensions_replace_table = [  # noqa
+                p
+                for p in table_slice.partition_dimensions
+                if p.partition_expr in partition_fields.values()
+            ]
     else:
         table = catalog.create_table(
             table_path,
@@ -129,6 +165,8 @@ def _table_writer(
                     update.add_field(partition.partition_expr, transform=transform)
 
     if table_slice.partition_dimensions is not None:
+        if update_spec:
+            ...
         partition_filters = partition_dimensions_to_filters(
             partition_dimensions=table_slice.partition_dimensions,
             table_schema=table.schema(),
