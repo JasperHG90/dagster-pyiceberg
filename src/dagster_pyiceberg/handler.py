@@ -191,11 +191,6 @@ def _table_writer(
             # See: https://github.com/apache/iceberg-python/issues/1108
             # We need to partition on the old partition fields when overwriting, not the new partition fields
             # nb: this won't work if we write multiple slices because not all slices are updated
-            # partition_dimensions_replace_table = [  # noqa
-            #     p
-            #     for p in table_slice.partition_dimensions
-            #     if p.partition_expr in partition_fields.values()
-            # ]
     else:
         table = catalog.create_table(
             table_path,

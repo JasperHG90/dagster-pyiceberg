@@ -1,4 +1,5 @@
 import datetime as dt
+import pathlib as plb
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -330,7 +331,7 @@ def test_table_writer_multi_partitioned_update(catalog: SqlCatalog, data: pa.Tab
 
 
 def test_table_writer_multi_partitioned_update_schema_change(
-    catalog: SqlCatalog, data: pa.Table
+    warehouse_path: str, catalog: SqlCatalog, data: pa.Table
 ):
     handler._table_writer(
         table_slice=TableSlice(
@@ -368,4 +369,22 @@ def test_table_writer_multi_partitioned_update_schema_change(
         ),
         data=data_,
         catalog=catalog,
+    )
+    path_to_dwh = (
+        plb.Path(warehouse_path)
+        / "pytest.db"
+        / "data_multi_partitioned_update_schema_change"
+        / "data"
+        / "timestamp_hour=2023-01-01-00"
+    )
+    categories = sorted([p.name for p in path_to_dwh.glob("*") if p.is_dir()])
+    assert categories == ["category=A", "category=B", "category=C"]
+    assert (
+        len(
+            catalog.load_table("pytest.data_multi_partitioned_update_schema_change")
+            .scan()
+            .to_arrow()
+            .to_pydict()["value"]
+        )
+        == 1440
     )
