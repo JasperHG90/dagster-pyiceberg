@@ -102,10 +102,10 @@ def add_data_to_table(
 def test_time_window_partition_filter(
     datetime_table_partition_dimension: TablePartitionDimension,
 ):
-    expected_filter = E.And(
+    expected_filter = [
         E.GreaterThanOrEqual("timestamp", "2023-01-01T00:00:00"),
         E.LessThan("timestamp", "2023-01-01T01:00:00"),
-    )
+    ]
     filter_ = handler._time_window_partition_filter(datetime_table_partition_dimension)
     assert filter_ == expected_filter
 
@@ -138,10 +138,8 @@ def test_partition_dimensions_to_filters(
         table_partition_spec=table_partitioned.spec(),
     )
     expected_filters = [
-        E.And(
-            E.GreaterThanOrEqual("timestamp", "2023-01-01T00:00:00"),
-            E.LessThan("timestamp", "2023-01-01T01:00:00"),
-        ),
+        E.GreaterThanOrEqual("timestamp", "2023-01-01T00:00:00"),
+        E.LessThan("timestamp", "2023-01-01T01:00:00"),
         E.EqualTo("category", "A"),
     ]
     assert filters == expected_filters

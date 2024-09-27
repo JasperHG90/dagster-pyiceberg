@@ -1,6 +1,18 @@
 import datetime as dt
 from abc import abstractmethod
-from typing import Generic, Iterable, Optional, Sequence, Type, TypeVar, Union, cast
+from typing import (
+    Dict,
+    Generic,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import pendulum
 import pyarrow as pa
@@ -18,6 +30,8 @@ from pyiceberg import table
 from pyiceberg import table as iceberg_table
 from pyiceberg import transforms
 from pyiceberg import types as T
+from pyiceberg.partitioning import PartitionSpec
+from pyiceberg.schema import Schema
 
 U = TypeVar("U")
 
@@ -104,6 +118,57 @@ class IcebergPyArrowTypeHandler(IcebergBaseTypeHandler[ArrowTypes]):
         return (pa.Table, pa.RecordBatchReader)
 
 
+class PartitionUpdateDiffer:
+
+    def __init__(
+        self,
+        iceberg_table_schema: Schema,
+        iceberg_partition_spec: PartitionSpec,
+        table_slice: TableSlice,
+    ):
+        self.iceberg_table_schema = iceberg_table_schema
+        self.iceberg_partition_spec = iceberg_partition_spec
+        self.table_slice = table_slice
+
+    @property
+    def iceberg_table_partition_field_names(self) -> Dict[int, str]:
+        return map_partition_spec_to_fields(
+            partition_spec=self.iceberg_partition_spec,
+            table_schema=self.iceberg_table_schema,
+        )
+
+    @property
+    def dagster_partition_dimension_names(self) -> List[str]:
+        return [p.partition_expr for p in self.table_slice.partition_dimensions]
+
+    @property
+    def get_new_partition_field_names(self) -> Set[str]:
+        return set(self.dagster_partition_dimension_names) - set(
+            self.iceberg_table_partition_field_names.values()
+        )
+
+    def diff(self) -> List[TablePartitionDimension]:
+        return [
+            p
+            for p in self.table_slice.partition_dimensions
+            if p.partition_expr in self.get_new_partition_field_names
+        ]
+
+
+def _update_table_spec(
+    table: table.Table, partition_dimensions: List[TablePartitionDimension]
+):
+    if len(partition_dimensions) == 0:
+        return
+    with table.update_spec() as update:
+        for partition in partition_dimensions:
+            if isinstance(partition.partitions, TimeWindow):
+                transform = diff_to_transformation(*partition.partitions)
+            else:
+                transform = transforms.IdentityTransform()
+            update.add_field(partition.partition_expr, transform=transform)
+
+
 def _table_writer(
     table_slice: TableSlice, data: ArrowTypes, catalog: catalog.MetastoreCatalog
 ):
@@ -115,37 +180,22 @@ def _table_writer(
         # Check if partitions match. If not, update
         #  But this should be a configuration option per table
         if table_slice.partition_dimensions is not None:
-            update_spec = True
-            partition_fields = map_partition_spec_to_fields(
-                partition_spec=table.spec(), table_schema=table.schema()
+            _update_table_spec(
+                table=table,
+                partition_dimensions=PartitionUpdateDiffer(
+                    table_slice=table_slice,
+                    iceberg_table_schema=table.schema(),
+                    iceberg_partition_spec=table.spec(),
+                ).diff(),
             )
-            partition_exprs = [
-                p.partition_expr for p in table_slice.partition_dimensions
-            ]
-            partition_fields_not_set = set(partition_exprs) - set(
-                partition_fields.values()
-            )
-            if len(partition_fields_not_set) > 0:
-                new_partition_dimensions = [
-                    p
-                    for p in table_slice.partition_dimensions
-                    if p.partition_expr in partition_fields_not_set
-                ]
-                with table.update_spec() as update:
-                    for partition in new_partition_dimensions:
-                        if isinstance(partition, TimeWindow):
-                            transform = diff_to_transformation(*partition)
-                        else:
-                            transform = transforms.IdentityTransform()
-                        update.add_field(partition.partition_expr, transform=transform)
             # See: https://github.com/apache/iceberg-python/issues/1108
             # We need to partition on the old partition fields when overwriting, not the new partition fields
             # nb: this won't work if we write multiple slices because not all slices are updated
-            partition_dimensions_replace_table = [  # noqa
-                p
-                for p in table_slice.partition_dimensions
-                if p.partition_expr in partition_fields.values()
-            ]
+            # partition_dimensions_replace_table = [  # noqa
+            #     p
+            #     for p in table_slice.partition_dimensions
+            #     if p.partition_expr in partition_fields.values()
+            # ]
     else:
         table = catalog.create_table(
             table_path,
@@ -156,13 +206,9 @@ def _table_writer(
         # We can base them on the partition dimensions, but optionally we can allow users
         #  to pass these as metadata to the asset
         if table_slice.partition_dimensions is not None:
-            with table.update_spec() as update:
-                for partition in table_slice.partition_dimensions:
-                    if isinstance(partition.partitions, TimeWindow):
-                        transform = diff_to_transformation(*partition.partitions)
-                    else:
-                        transform = transforms.IdentityTransform()
-                    update.add_field(partition.partition_expr, transform=transform)
+            _update_table_spec(
+                table=table, partition_dimensions=table_slice.partition_dimensions
+            )
 
     if table_slice.partition_dimensions is not None:
         if update_spec:
@@ -191,16 +237,18 @@ def _table_writer(
     )
 
 
-def _time_window_partition_filter(table_partition: TablePartitionDimension):
+def _time_window_partition_filter(
+    table_partition: TablePartitionDimension,
+) -> List[E.BooleanExpression]:
     partition = cast(TimeWindow, table_partition.partitions)
     start_dt, end_dt = partition
     if isinstance(start_dt, dt.datetime):
         start_dt = start_dt.replace(tzinfo=None)
         end_dt = end_dt.replace(tzinfo=None)
-    return E.And(
+    return [
         E.GreaterThanOrEqual(table_partition.partition_expr, start_dt.isoformat()),
         E.LessThan(table_partition.partition_expr, end_dt.isoformat()),
-    )
+    ]
 
 
 def _partition_filter(table_partition: TablePartitionDimension):
@@ -246,6 +294,7 @@ def partition_dimensions_to_filters(
                     f"Table is not partitioned by field '{field.name}' with id '{field.field_id}'. Available partition fields: {partition_spec_fields}"
                 )
         # NB: add timestamp tz type and time type
+        filter_: Union[E.BooleanExpression, List[E.BooleanExpression]]
         if isinstance(field.field_type, time_partition_dt_types):
             filter_ = _time_window_partition_filter(table_partition=partition_dimension)
         elif isinstance(field.field_type, partition_types):
@@ -254,7 +303,11 @@ def partition_dimensions_to_filters(
             raise ValueError(
                 f"Partitioning by field type '{str(field.field_type)}' not supported"
             )
-        partition_filters.append(filter_)
+        (
+            partition_filters.append(filter_)
+            if isinstance(filter_, E.BooleanExpression)
+            else partition_filters.extend(filter_)
+        )
     return partition_filters
 
 
