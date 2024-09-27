@@ -7,8 +7,11 @@ import pytest
 from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
 from pyiceberg import expressions as E
+from pyiceberg import partitioning as iceberg_partitioning
+from pyiceberg import schema as iceberg_schema
 from pyiceberg import table as iceberg_table
 from pyiceberg import transforms
+from pyiceberg import types as iceberg_types
 from pyiceberg.catalog.sql import SqlCatalog
 
 from dagster_pyiceberg import handler
@@ -388,3 +391,44 @@ def test_table_writer_multi_partitioned_update_schema_change(
         )
         == 1440
     )
+
+
+def test_partition_update_differ_no_changes():
+    schema = iceberg_schema.Schema(
+        iceberg_types.NestedField(
+            1,
+            "timestamp",
+            iceberg_types.TimestampType(),
+        ),
+        iceberg_types.NestedField(
+            2,
+            "category",
+            iceberg_types.StringType(),
+        ),
+    )
+    spec = iceberg_partitioning.PartitionSpec(
+        iceberg_partitioning.PartitionField(
+            1, 1, name="timestamp", transform=transforms.HourTransform()
+        ),
+    )
+    table_slice = TableSlice(
+        table="data_multi_partitioned_update_schema_change",
+        schema="pytest",
+        partition_dimensions=[
+            TablePartitionDimension(
+                "timestamp",
+                TimeWindow(dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1)),
+            ),
+            TablePartitionDimension(
+                "category",
+                ["A"],
+            ),
+        ],
+    )
+    new_partitions = handler.PartitionUpdateDiffer(
+        iceberg_table_schema=schema,
+        iceberg_partition_spec=spec,
+        table_slice=table_slice,
+    ).diff()
+    assert len(new_partitions) == 1
+    assert new_partitions[0].partition_expr == "category"
