@@ -156,7 +156,7 @@ class PartitionUpdateDiffer:
 
 
 def _update_table_spec(
-    table: table.Table, partition_dimensions: List[TablePartitionDimension]
+    table: table.Table, partition_dimensions: Sequence[TablePartitionDimension]
 ):
     if len(partition_dimensions) == 0:
         return
@@ -169,11 +169,27 @@ def _update_table_spec(
             update.add_field(partition.partition_expr, transform=transform)
 
 
+def _get_row_filter(
+    iceberg_table_schema: Schema,
+    iceberg_partition_spec: PartitionSpec,
+    dagster_partition_dimensions: Sequence[TablePartitionDimension],
+) -> E.BooleanExpression:
+    partition_filters = partition_dimensions_to_filters(
+        partition_dimensions=dagster_partition_dimensions,
+        table_schema=iceberg_table_schema,
+        table_partition_spec=iceberg_partition_spec,
+    )
+    return (
+        E.And(*partition_filters)
+        if len(partition_filters) > 1
+        else partition_filters[0]
+    )
+
+
 def _table_writer(
     table_slice: TableSlice, data: ArrowTypes, catalog: catalog.MetastoreCatalog
 ):
     table_path = f"{table_slice.schema}.{table_slice.table}"
-    update_spec: bool = False
     if catalog.table_exists(table_path):
         table = catalog.load_table(table_path)
 
@@ -188,9 +204,6 @@ def _table_writer(
                     iceberg_partition_spec=table.spec(),
                 ).diff(),
             )
-            # See: https://github.com/apache/iceberg-python/issues/1108
-            # We need to partition on the old partition fields when overwriting, not the new partition fields
-            # nb: this won't work if we write multiple slices because not all slices are updated
     else:
         table = catalog.create_table(
             table_path,
@@ -205,18 +218,12 @@ def _table_writer(
                 table=table, partition_dimensions=table_slice.partition_dimensions
             )
 
+    row_filter: E.BooleanExpression
     if table_slice.partition_dimensions is not None:
-        if update_spec:
-            ...
-        partition_filters = partition_dimensions_to_filters(
-            partition_dimensions=table_slice.partition_dimensions,
-            table_schema=table.schema(),
-            table_partition_spec=table.spec(),
-        )
-        row_filter = (
-            E.And(*partition_filters)
-            if len(partition_filters) > 1
-            else partition_filters[0]
+        row_filter = _get_row_filter(
+            iceberg_table_schema=table.schema(),
+            iceberg_partition_spec=table.spec(),
+            dagster_partition_dimensions=table_slice.partition_dimensions,
         )
     else:
         row_filter = iceberg_table.ALWAYS_TRUE
@@ -314,16 +321,12 @@ def _table_reader(
     table = catalog.load_table(table_name)
 
     selected_fields = table_slice.columns if table_slice.columns is not None else ("*",)
+    row_filter: E.BooleanExpression
     if table_slice.partition_dimensions is not None:
-        partition_filters = partition_dimensions_to_filters(
-            partition_dimensions=table_slice.partition_dimensions,
-            table_schema=table.schema(),
-            table_partition_spec=table.spec(),
-        )
-        row_filter = (
-            E.And(*partition_filters)
-            if len(partition_filters) > 1
-            else partition_filters[0]
+        row_filter = _get_row_filter(
+            iceberg_table_schema=table.schema(),
+            iceberg_partition_spec=table.spec(),
+            dagster_partition_dimensions=table_slice.partition_dimensions,
         )
     else:
         row_filter = iceberg_table.ALWAYS_TRUE
