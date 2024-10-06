@@ -2,7 +2,7 @@ from abc import abstractmethod
 from contextlib import contextmanager  # noqa
 from typing import Dict, Iterator, Optional, Sequence, Type, TypedDict, cast  # noqa
 
-from dagster import Field, OutputContext
+from dagster import OutputContext
 from dagster._config.pythonic_config import ConfigurableIOManagerFactory
 from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.storage.db_io_manager import (
@@ -12,6 +12,7 @@ from dagster._core.storage.db_io_manager import (
     TablePartitionDimension,
     TableSlice,
 )
+from pydantic import Field
 from pyiceberg.catalog import MetastoreCatalog
 from pyiceberg.catalog.sql import SqlCatalog
 
@@ -20,13 +21,13 @@ from .config import IcebergRestCatalogConfig, IcebergSqlCatalogConfig  # noqa
 
 class _IcebergCatalogProperties(TypedDict, total=False):
 
-    sql_catalog: Dict[str, str]
+    properties: Dict[str, str]
 
 
 class _IcebergTableIOManagerResourceConfig(TypedDict):
 
     name: str
-    properties: _IcebergCatalogProperties
+    config: _IcebergCatalogProperties
 
 
 class IcebergDbClient(DbClient):
@@ -63,11 +64,11 @@ class IcebergDbClient(DbClient):
         resource_config = cast(
             _IcebergTableIOManagerResourceConfig, context.resource_config
         )
-        properties = resource_config["properties"]
+        config = resource_config["config"]
 
         name = resource_config["name"]
 
-        conn = SqlCatalog(name=name, **properties)
+        conn = SqlCatalog(name=name, **config["properties"])
 
         yield conn
 
@@ -75,9 +76,12 @@ class IcebergDbClient(DbClient):
 class BaseIcebergIOManager(ConfigurableIOManagerFactory):
 
     name: str = Field(description="The name of the iceberg catalog")
-    properties: IcebergSqlCatalogConfig = Field(
+    config: IcebergSqlCatalogConfig = Field(
         description="Additional configuration properties for the iceberg catalog"
     )
+    schema_: Optional[str] = Field(
+        default=None, alias="schema", description="Name of the schema to use."
+    )  # schema is a reserved word for pydantic
 
     @staticmethod
     @abstractmethod
@@ -88,33 +92,15 @@ class BaseIcebergIOManager(ConfigurableIOManagerFactory):
         return None
 
     def create_io_manager(self, context) -> DbIOManager:
-        self.properties.dict()
+        self.config.model_dump()
         return DbIOManager(
             db_client=IcebergDbClient(),
             database="iceberg",
-            schema="dagster",
+            schema=self.schema_,
             type_handlers=self.type_handlers(),
             default_load_type=self.default_load_type(),
             io_manager_name="IcebergIOManager",
         )
-
-    # client_options = resource_config.get("client_options")
-    # client_options = client_options or {}
-
-    # storage_options = {
-    #     **{k: str(v) for k, v in storage_options.items() if v is not None},
-    #     **{k: str(v) for k, v in client_options.items() if v is not None},
-    # }
-    # table_config = resource_config.get("table_config")
-    # table_uri = f"{root_uri}/{table_slice.schema}/{table_slice.table}"
-
-    # conn = TableConnection(
-    #     table_uri=table_uri,
-    #     storage_options=storage_options or {},
-    #     table_config=table_config,
-    # )
-
-    # yield conn
 
 
 def _partition_where_clause(

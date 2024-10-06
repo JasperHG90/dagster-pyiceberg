@@ -195,7 +195,7 @@ def _table_writer(
 
         # Check if partitions match. If not, update
         #  But this should be a configuration option per table
-        if table_slice.partition_dimensions is not None:
+        if len(table_slice.partition_dimensions) != 0:
             _update_table_spec(
                 table=table,
                 partition_dimensions=PartitionUpdateDiffer(
@@ -213,13 +213,13 @@ def _table_writer(
         #  and these need transforms
         # We can base them on the partition dimensions, but optionally we can allow users
         #  to pass these as metadata to the asset
-        if table_slice.partition_dimensions is not None:
+        if len(table_slice.partition_dimensions) != 0:
             _update_table_spec(
                 table=table, partition_dimensions=table_slice.partition_dimensions
             )
 
     row_filter: E.BooleanExpression
-    if table_slice.partition_dimensions is not None:
+    if len(table_slice.partition_dimensions) != 0:
         row_filter = _get_row_filter(
             iceberg_table_schema=table.schema(),
             iceberg_partition_spec=table.spec(),
@@ -322,7 +322,7 @@ def _table_reader(
 
     selected_fields = table_slice.columns if table_slice.columns is not None else ("*",)
     row_filter: E.BooleanExpression
-    if table_slice.partition_dimensions is not None:
+    if len(table_slice.partition_dimensions) != 0:
         row_filter = _get_row_filter(
             iceberg_table_schema=table.schema(),
             iceberg_partition_spec=table.spec(),

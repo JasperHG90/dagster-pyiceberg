@@ -11,18 +11,17 @@ else:
 
 class _IcebergCatalogBaseConfig(Config):
 
-    name: str
     properties: Dict[str, Any]
 
 
 class IcebergSqlCatalogConfig(_IcebergCatalogBaseConfig):
 
-    type: Literal["sql"]
+    type: Literal["sql"] = "sql"
 
 
 class IcebergRestCatalogConfig(_IcebergCatalogBaseConfig):
 
-    type: Literal["rest"]
+    type: Literal["rest"] = "rest"
 
 
 # Options (not yet covered)
