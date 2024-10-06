@@ -1,22 +1,32 @@
+from abc import abstractmethod
 from contextlib import contextmanager  # noqa
-from typing import Iterator, Sequence, TypedDict, cast  # noqa
+from typing import Dict, Iterator, Optional, Sequence, Type, TypedDict, cast  # noqa
 
-from dagster import OutputContext
+from dagster import Field, OutputContext
+from dagster._config.pythonic_config import ConfigurableIOManagerFactory
 from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.storage.db_io_manager import (
     DbClient,
+    DbIOManager,
+    DbTypeHandler,
     TablePartitionDimension,
     TableSlice,
 )
 from pyiceberg.catalog import MetastoreCatalog
+from pyiceberg.catalog.sql import SqlCatalog
 
 from .config import IcebergRestCatalogConfig, IcebergSqlCatalogConfig  # noqa
+
+
+class _IcebergCatalogProperties(TypedDict, total=False):
+
+    sql_catalog: Dict[str, str]
 
 
 class _IcebergTableIOManagerResourceConfig(TypedDict):
 
     name: str
-    properties: dict
+    properties: _IcebergCatalogProperties
 
 
 class IcebergDbClient(DbClient):
@@ -47,25 +57,46 @@ class IcebergDbClient(DbClient):
         else:
             return f"""SELECT {col_str} FROM {table_slice.schema}.{table_slice.table}"""
 
-    # @staticmethod
-    # @contextmanager
-    # def connect(context, table_slice: TableSlice) -> Iterator[MetastoreCatalog]:
-    #     resource_config = cast(
-    #         _DeltaTableIOManagerResourceConfig, context.resource_config
-    #     )
-    #     root_uri = resource_config["root_uri"].rstrip("/")
-    #     storage_options = resource_config["storage_options"]
+    @staticmethod
+    @contextmanager
+    def connect(context, table_slice: TableSlice) -> Iterator[MetastoreCatalog]:
+        resource_config = cast(
+            _IcebergTableIOManagerResourceConfig, context.resource_config
+        )
+        properties = resource_config["properties"]
 
-    #     if "local" in storage_options:
-    #         storage_options = storage_options["local"]
-    #     elif "s3" in storage_options:
-    #         storage_options = storage_options["s3"]
-    #     elif "azure" in storage_options:
-    #         storage_options = storage_options["azure"]
-    #     elif "gcs" in storage_options:
-    #         storage_options = storage_options["gcs"]
-    #     else:
-    #         storage_options = {}
+        name = resource_config["name"]
+
+        conn = SqlCatalog(name=name, **properties)
+
+        yield conn
+
+
+class BaseIcebergIOManager(ConfigurableIOManagerFactory):
+
+    name: str = Field(description="The name of the iceberg catalog")
+    properties: IcebergSqlCatalogConfig = Field(
+        description="Additional configuration properties for the iceberg catalog"
+    )
+
+    @staticmethod
+    @abstractmethod
+    def type_handlers() -> Sequence[DbTypeHandler]: ...
+
+    @staticmethod
+    def default_load_type() -> Optional[Type]:
+        return None
+
+    def create_io_manager(self, context) -> DbIOManager:
+        self.properties.dict()
+        return DbIOManager(
+            db_client=IcebergDbClient(),
+            database="iceberg",
+            schema="dagster",
+            type_handlers=self.type_handlers(),
+            default_load_type=self.default_load_type(),
+            io_manager_name="IcebergIOManager",
+        )
 
     # client_options = resource_config.get("client_options")
     # client_options = client_options or {}

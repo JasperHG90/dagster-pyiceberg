@@ -157,7 +157,7 @@ class PartitionUpdateDiffer:
 
 def _update_table_spec(
     table: table.Table, partition_dimensions: Sequence[TablePartitionDimension]
-):
+) -> None:
     if len(partition_dimensions) == 0:
         return
     with table.update_spec() as update:
@@ -188,7 +188,7 @@ def _get_row_filter(
 
 def _table_writer(
     table_slice: TableSlice, data: ArrowTypes, catalog: catalog.MetastoreCatalog
-):
+) -> None:
     table_path = f"{table_slice.schema}.{table_slice.table}"
     if catalog.table_exists(table_path):
         table = catalog.load_table(table_path)
@@ -253,7 +253,7 @@ def _time_window_partition_filter(
     ]
 
 
-def _partition_filter(table_partition: TablePartitionDimension):
+def _partition_filter(table_partition: TablePartitionDimension):  # return type
     partition = cast(Sequence[str], table_partition.partitions)
     if len(partition) > 1:
         raise NotImplementedError(
@@ -281,7 +281,7 @@ def partition_dimensions_to_filters(
     partition_dimensions: Iterable[TablePartitionDimension],
     table_schema: schema.Schema,
     table_partition_spec: Optional[partitioning.PartitionSpec] = None,
-):
+) -> List[E.BooleanExpression]:
     """Converts dagster partitions to iceberg filters"""
     partition_filters = []
     if table_partition_spec is not None:  # Only None when writing new tables
