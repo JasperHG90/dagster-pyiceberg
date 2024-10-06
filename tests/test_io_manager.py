@@ -1,6 +1,8 @@
+import datetime as dt
+
 import pyarrow as pa
 import pytest
-from dagster import asset, materialize
+from dagster import AssetExecutionContext, DailyPartitionsDefinition, asset, materialize
 from pyiceberg.catalog.sql import SqlCatalog
 
 from dagster_pyiceberg import IcebergPyarrowIOManager, IcebergSqlCatalogConfig
@@ -42,6 +44,19 @@ def b_plus_one(b_df: pa.Table) -> pa.Table:
     return b_df.set_column(0, "a", pa.array([2, 3, 4]))
 
 
+@asset(
+    key_prefix=["my_schema"],
+    partitions_def=DailyPartitionsDefinition(start_date="2022-01-01"),
+    config_schema={"value": str},
+    metadata={"partition_expr": "partition"},
+)
+def daily_partitioned(context: AssetExecutionContext) -> pa.Table:
+    partition = dt.datetime.strptime(context.partition_key, "%Y-%m-%d").date()
+    value = context.op_execution_context.op_config["value"]
+
+    return pa.Table.from_pydict({"partition": [partition], "value": [value], "b": [1]})
+
+
 def test_iceberg_io_manager_with_assets(tmp_path, sql_catalog, io_manager):
     resource_defs = {"io_manager": io_manager}
 
@@ -56,3 +71,18 @@ def test_iceberg_io_manager_with_assets(tmp_path, sql_catalog, io_manager):
         dt = sql_catalog.load_table("dagster.b_plus_one")
         out_dt = dt.scan().to_arrow()
         assert out_dt["a"].to_pylist() == [2, 3, 4]
+
+
+def test_iceberg_io_manager_with_time_partitioned_assets(
+    tmp_path, sql_catalog, io_manager
+):
+    resource_defs = {"io_manager": io_manager}
+
+    materialize(
+        [daily_partitioned],
+        partition_key="2022-01-01",
+        resources=resource_defs,
+        run_config={
+            "ops": {"my_schema__daily_partitioned": {"config": {"value": "1"}}}
+        },
+    )
