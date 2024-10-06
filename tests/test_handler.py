@@ -59,7 +59,7 @@ def table_slice() -> TableSlice:
     return TableSlice(
         table="data",
         schema="pytest",
-        partition_dimensions=None,
+        partition_dimensions=[],
     )
 
 
@@ -68,7 +68,7 @@ def table_slice_with_selected_columns() -> TableSlice:
     return TableSlice(
         table="data",
         schema="pytest",
-        partition_dimensions=None,
+        partition_dimensions=[],
         columns=["value"],
     )
 
@@ -221,7 +221,7 @@ def test_table_writer(catalog: SqlCatalog, data: pa.Table):
         table_slice=TableSlice(
             table="data_table_writer",
             schema="pytest",
-            partition_dimensions=None,
+            partition_dimensions=[],
         ),
         data=data,
         catalog=catalog,
