@@ -6,6 +6,8 @@ from dagster import (
     AssetExecutionContext,
     DailyPartitionsDefinition,
     HourlyPartitionsDefinition,
+    MultiPartitionsDefinition,
+    StaticPartitionsDefinition,
     asset,
     materialize,
 )
@@ -74,6 +76,33 @@ def daily_partitioned(context: AssetExecutionContext) -> pa.Table:
     value = context.op_execution_context.op_config["value"]
 
     return pa.Table.from_pydict({"partition": [partition], "value": [value], "b": [1]})
+
+
+@asset(
+    key_prefix=["my_schema"],
+    partitions_def=MultiPartitionsDefinition(
+        partitions_defs={
+            "date": DailyPartitionsDefinition(start_date="2022-01-01"),
+            "category": StaticPartitionsDefinition(["a", "b", "c"]),
+        }
+    ),
+    config_schema={"value": str},
+    metadata={
+        "partition_expr": {
+            "date": "date",
+            "category": "category",
+        }
+    },
+)
+def multi_partitioned(context: AssetExecutionContext) -> pa.Table:
+
+    category, date = context.partition_key.split("|")
+    date_parsed = dt.datetime.strptime(date, "%Y-%m-%d").date()
+    value = context.op_execution_context.op_config["value"]
+
+    return pa.Table.from_pydict(
+        {"date": [date_parsed], "value": [value], "b": [1], "category": [category]}
+    )
 
 
 def test_iceberg_io_manager_with_assets(tmp_path, sql_catalog, io_manager):
@@ -146,3 +175,42 @@ def test_iceberg_io_manager_with_hourly_partitioned_assets(
         dt.datetime(2022, 1, 1, 2, 0),
         dt.datetime(2022, 1, 1, 1, 0),
     ]
+
+
+def test_iceberg_io_manager_with_multipartitioned_assets(
+    tmp_path, sql_catalog, io_manager
+):
+    resource_defs = {"io_manager": io_manager}
+
+    for key in [
+        "a|2022-01-01",
+        "b|2022-01-01",
+        "c|2022-01-01",
+        "a|2022-01-02",
+        "b|2022-01-02",
+        "c|2022-01-02",
+    ]:
+        res = materialize(
+            [multi_partitioned],
+            partition_key=key,
+            resources=resource_defs,
+            run_config={
+                "ops": {"my_schema__multi_partitioned": {"config": {"value": "1"}}}
+            },
+        )
+        assert res.success
+
+    table = sql_catalog.load_table("dagster.multi_partitioned")
+    assert len(table.spec().fields) == 2
+    assert [f.name for f in table.spec().fields] == ["category", "date_day"]
+
+    out_df = table.scan().to_arrow()
+    assert out_df["date"].to_pylist() == [
+        dt.date(2022, 1, 2),
+        dt.date(2022, 1, 2),
+        dt.date(2022, 1, 2),
+        dt.date(2022, 1, 1),
+        dt.date(2022, 1, 1),
+        dt.date(2022, 1, 1),
+    ]
+    assert out_df["category"].to_pylist() == ["c", "b", "a", "c", "b", "a"]
