@@ -241,12 +241,31 @@ def _table_writer(
 
 def _time_window_partition_filter(
     table_partition: TablePartitionDimension,
+    iceberg_partition_spec_field_type: Union[
+        T.DateType, T.TimestampType, T.TimeType, T.TimestamptzType
+    ],
 ) -> List[E.BooleanExpression]:
+    """Create an iceberg filter for a dagster time window partition
+
+    Args:
+        table_partition (TablePartitionDimension): Dagster time window partition
+        iceberg_partition_spec_field_type (Union[T.DateType, T.TimestampType, T.TimeType, T.TimestamptzType]): Iceberg field type
+         required to correctly format the partition values
+
+    Returns:
+        List[E.BooleanExpression]: List of iceberg filters with start and end dates
+    """
     partition = cast(TimeWindow, table_partition.partitions)
     start_dt, end_dt = partition
     if isinstance(start_dt, dt.datetime):
         start_dt = start_dt.replace(tzinfo=None)
         end_dt = end_dt.replace(tzinfo=None)
+    if isinstance(iceberg_partition_spec_field_type, T.DateType):
+        # Internally, PyIceberg uses dt.date.fromisoformat to parse dates.
+        #  Dagster will pass dt.datetime objects in time window partitions.
+        #  but dt.date.fromisoformat cannot parse dt.datetime.isoformat strings
+        start_dt = start_dt.date()
+        end_dt = end_dt.date()
     return [
         E.GreaterThanOrEqual(table_partition.partition_expr, start_dt.isoformat()),
         E.LessThan(table_partition.partition_expr, end_dt.isoformat()),
@@ -298,7 +317,10 @@ def partition_dimensions_to_filters(
         # NB: add timestamp tz type and time type
         filter_: Union[E.BooleanExpression, List[E.BooleanExpression]]
         if isinstance(field.field_type, time_partition_dt_types):
-            filter_ = _time_window_partition_filter(table_partition=partition_dimension)
+            filter_ = _time_window_partition_filter(
+                table_partition=partition_dimension,
+                iceberg_partition_spec_field_type=field.field_type,
+            )
         elif isinstance(field.field_type, partition_types):
             filter_ = _partition_filter(table_partition=partition_dimension)
         else:
