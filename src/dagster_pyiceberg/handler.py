@@ -190,6 +190,12 @@ def _table_writer(
     table_slice: TableSlice, data: ArrowTypes, catalog: catalog.MetastoreCatalog
 ) -> None:
     table_path = f"{table_slice.schema}.{table_slice.table}"
+    # Check partition_expr passed correctly
+    partition_exprs = [p.partition_expr for p in table_slice.partition_dimensions]
+    if any(p is None for p in partition_exprs):
+        raise ValueError(
+            f"Could not map partition to partition expr, got '{partition_exprs}'. Did you name your partitions correctly and provided the correct 'partition_expr' in the asset metadata?"
+        )
     if catalog.table_exists(table_path):
         table = catalog.load_table(table_path)
 
