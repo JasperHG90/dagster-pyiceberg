@@ -11,6 +11,7 @@ from pyiceberg import partitioning as iceberg_partitioning
 from pyiceberg import schema as iceberg_schema
 from pyiceberg import table as iceberg_table
 from pyiceberg import transforms
+from pyiceberg import types as T
 from pyiceberg import types as iceberg_types
 from pyiceberg.catalog.sql import SqlCatalog
 
@@ -110,7 +111,9 @@ def test_time_window_partition_filter(
         E.GreaterThanOrEqual("timestamp", "2023-01-01T00:00:00"),
         E.LessThan("timestamp", "2023-01-01T01:00:00"),
     ]
-    filter_ = handler._time_window_partition_filter(datetime_table_partition_dimension)
+    filter_ = handler._time_window_partition_filter(
+        datetime_table_partition_dimension, T.TimestampType
+    )
     assert filter_ == expected_filter
 
 
