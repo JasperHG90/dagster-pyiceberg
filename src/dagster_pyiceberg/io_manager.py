@@ -14,13 +14,20 @@ from dagster._core.storage.db_io_manager import (
 )
 from pydantic import Field
 from pyiceberg.catalog import MetastoreCatalog
+from pyiceberg.catalog.rest import RestCatalog
 from pyiceberg.catalog.sql import SqlCatalog
 
 from .config import IcebergRestCatalogConfig, IcebergSqlCatalogConfig  # noqa
 
+supported_catalogs = {
+    "sql": SqlCatalog,
+    "rest": RestCatalog,
+}
+
 
 class _IcebergCatalogProperties(TypedDict, total=False):
 
+    type: str
     properties: Dict[str, str]
 
 
@@ -65,10 +72,14 @@ class IcebergDbClient(DbClient):
             _IcebergTableIOManagerResourceConfig, context.resource_config
         )
         config = resource_config["config"]
-
         name = resource_config["name"]
+        type_ = config["type"]
 
-        conn = SqlCatalog(name=name, **config["properties"])
+        try:
+            conn = supported_catalogs[type_](name=name, **config["properties"])
+            yield conn
+        except KeyError:
+            raise NotImplementedError(f"Catalog type '{type_}' not implemented")
 
         yield conn
 
@@ -76,7 +87,7 @@ class IcebergDbClient(DbClient):
 class BaseIcebergIOManager(ConfigurableIOManagerFactory):
 
     name: str = Field(description="The name of the iceberg catalog")
-    config: IcebergSqlCatalogConfig = Field(
+    config: IcebergSqlCatalogConfig | IcebergRestCatalogConfig = Field(
         description="Additional configuration properties for the iceberg catalog"
     )
     schema_: Optional[str] = Field(
