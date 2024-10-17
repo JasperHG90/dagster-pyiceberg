@@ -28,11 +28,6 @@ from pyiceberg.catalog.sql import SqlCatalog
 
 from .config import IcebergRestCatalogConfig, IcebergSqlCatalogConfig  # noqa
 
-supported_catalogs = {
-    "sql": SqlCatalog,
-    "rest": RestCatalog,
-}
-
 
 class _IcebergCatalogProperties(TypedDict):
 
@@ -88,20 +83,13 @@ class IcebergDbClient(DbClient):
         config = resource_config["config"]
         name = resource_config["name"]
 
-        try:
-            catalog_type = list(set(supported_catalogs.keys()) & set(config.keys()))[0]
-        except IndexError:
+        if "sql" in config:
+            catalog = SqlCatalog(name=name, **config["sql"]["properties"])
+        elif "rest" in config:
+            catalog = RestCatalog(name=name, **config["rest"]["properties"])
+        else:
             NotImplementedError(
                 f"Catalog type '{list(config.keys())[0]}' not implemented"
-            )
-
-        if catalog_type == "sql":
-            catalog = supported_catalogs["sql"](
-                name=name, **config["sql"]["properties"]
-            )
-        elif catalog_type == "rest":
-            catalog = supported_catalogs["rest"](
-                name=name, **config["rest"]["properties"]
             )
 
         yield catalog
