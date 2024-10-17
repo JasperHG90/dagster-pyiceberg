@@ -95,7 +95,16 @@ class IcebergDbClient(DbClient):
                 f"Catalog type '{list(config.keys())[0]}' not implemented"
             )
 
-        yield supported_catalogs[catalog_type](name=name, **config["sql"]["properties"])
+        if catalog_type == "sql":
+            catalog = supported_catalogs["sql"](
+                name=name, **config["sql"]["properties"]
+            )
+        elif catalog_type == "rest":
+            catalog = supported_catalogs["rest"](
+                name=name, **config["rest"]["properties"]
+            )
+
+        yield catalog
 
 
 class BaseIcebergIOManager(ConfigurableIOManagerFactory):
