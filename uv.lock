@@ -375,8 +375,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "ipykernel" },
-    { name = "numpy", version = "1.26.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
-    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "pandas" },
     { name = "pre-commit" },
     { name = "pytest" },
@@ -393,7 +391,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "ipykernel", specifier = ">=6.29.5" },
-    { name = "numpy", specifier = "<=2.0.0" },
     { name = "pandas", specifier = ">=2.2.2" },
     { name = "pre-commit", specifier = ">=3.8.0" },
     { name = "pytest", specifier = ">=8.3.2" },

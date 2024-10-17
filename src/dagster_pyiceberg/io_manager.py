@@ -103,7 +103,9 @@ class BaseIcebergIOManager(ConfigurableIOManagerFactory):
         description="Additional configuration properties for the iceberg catalog",
     )
     schema_: Optional[str] = Field(
-        default=None, alias="schema", description="Name of the schema to use."
+        default=None,
+        alias="schema",
+        description="Name of the iceberg catalog schema to use.",
     )  # schema is a reserved word for pydantic
 
     @staticmethod

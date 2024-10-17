@@ -1,6 +1,6 @@
 import datetime as dt
+import random
 
-import numpy as np
 import pyarrow as pa
 import pytest
 from pyiceberg import table as iceberg_table
@@ -33,7 +33,7 @@ def namespace(catalog: SqlCatalog) -> str:
 
 @pytest.fixture(scope="session")
 def data() -> pa.Table:
-    np.random.seed(876)
+    random.seed(876)
     N = 1440
     d = {
         "timestamp": pa.array(
@@ -42,8 +42,8 @@ def data() -> pa.Table:
                 for i in range(N)
             ]
         ),
-        "category": pa.array([np.random.choice(["A", "B", "C"]) for _ in range(N)]),
-        "value": pa.array(np.random.normal(size=N)),
+        "category": pa.array([random.choice(["A", "B", "C"]) for _ in range(N)]),
+        "value": pa.array(random.uniform(0, 1) for _ in range(N)),
     }
     return pa.Table.from_pydict(d)
 

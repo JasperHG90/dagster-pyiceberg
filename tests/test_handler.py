@@ -288,7 +288,7 @@ def test_table_writer_multi_partitioned(catalog: SqlCatalog, data: pa.Table):
     table = catalog.load_table("pytest.data_table_writer_multi_partitioned")
     partition_field_names = [f.name for f in table.spec().fields]
     assert partition_field_names == ["timestamp_hour", "category"]
-    assert len(table.scan().to_arrow().to_pydict()["value"]) == 17
+    assert len(table.scan().to_arrow().to_pydict()["value"]) == 23
 
 
 def test_table_writer_multi_partitioned_update(catalog: SqlCatalog, data: pa.Table):
