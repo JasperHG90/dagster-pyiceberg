@@ -1,6 +1,15 @@
 from abc import abstractmethod
 from contextlib import contextmanager  # noqa
-from typing import Dict, Iterator, Optional, Sequence, Type, TypedDict, cast  # noqa
+from typing import (  # noqa
+    Dict,
+    Iterator,
+    Optional,
+    Sequence,
+    Type,
+    TypedDict,
+    Union,
+    cast,
+)
 
 from dagster import OutputContext
 from dagster._config.pythonic_config import ConfigurableIOManagerFactory
@@ -25,16 +34,21 @@ supported_catalogs = {
 }
 
 
-class _IcebergCatalogProperties(TypedDict, total=False):
+class _IcebergCatalogProperties(TypedDict):
 
-    type: str
     properties: Dict[str, str]
+
+
+class _IcebergMetastoreCatalogConfig(TypedDict, total=False):
+
+    sql: _IcebergCatalogProperties
+    rest: _IcebergCatalogProperties
 
 
 class _IcebergTableIOManagerResourceConfig(TypedDict):
 
     name: str
-    config: _IcebergCatalogProperties
+    config: _IcebergMetastoreCatalogConfig
 
 
 class IcebergDbClient(DbClient):
@@ -73,22 +87,23 @@ class IcebergDbClient(DbClient):
         )
         config = resource_config["config"]
         name = resource_config["name"]
-        type_ = config["type"]
 
         try:
-            conn = supported_catalogs[type_](name=name, **config["properties"])
-            yield conn
-        except KeyError:
-            raise NotImplementedError(f"Catalog type '{type_}' not implemented")
+            catalog_type = list(set(supported_catalogs.keys()) & set(config.keys()))[0]
+        except IndexError:
+            NotImplementedError(
+                f"Catalog type '{list(config.keys())[0]}' not implemented"
+            )
 
-        yield conn
+        yield supported_catalogs[catalog_type](name=name, **config["sql"]["properties"])
 
 
 class BaseIcebergIOManager(ConfigurableIOManagerFactory):
 
     name: str = Field(description="The name of the iceberg catalog")
-    config: IcebergSqlCatalogConfig | IcebergRestCatalogConfig = Field(
-        description="Additional configuration properties for the iceberg catalog"
+    config: Union[IcebergSqlCatalogConfig, IcebergRestCatalogConfig] = Field(
+        discriminator="type",
+        description="Additional configuration properties for the iceberg catalog",
     )
     schema_: Optional[str] = Field(
         default=None, alias="schema", description="Name of the schema to use."
