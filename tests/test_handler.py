@@ -12,7 +12,6 @@ from pyiceberg import schema as iceberg_schema
 from pyiceberg import table as iceberg_table
 from pyiceberg import transforms
 from pyiceberg import types as T
-from pyiceberg import types as iceberg_types
 from pyiceberg.catalog.sql import SqlCatalog
 
 from dagster_pyiceberg import handler
@@ -398,15 +397,15 @@ def test_table_writer_multi_partitioned_update_schema_change(
 
 def test_partition_update_differ_no_changes():
     schema = iceberg_schema.Schema(
-        iceberg_types.NestedField(
+        T.NestedField(
             1,
             "timestamp",
-            iceberg_types.TimestampType(),
+            T.TimestampType(),
         ),
-        iceberg_types.NestedField(
+        T.NestedField(
             2,
             "category",
-            iceberg_types.StringType(),
+            T.StringType(),
         ),
     )
     spec = iceberg_partitioning.PartitionSpec(

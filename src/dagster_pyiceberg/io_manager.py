@@ -88,8 +88,8 @@ class IcebergDbClient(DbClient):
         elif "rest" in config:
             catalog = RestCatalog(name=name, **config["rest"]["properties"])
         else:
-            NotImplementedError(
-                f"Catalog type '{list(config.keys())[0]}' not implemented"
+            raise NotImplementedError(
+                f"Catalog type '{next(iter(config.keys()))}' not implemented"
             )
 
         yield catalog

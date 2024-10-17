@@ -293,11 +293,15 @@ def map_partition_spec_to_fields(
     """Maps partition spec to fields"""
     partition_spec_fields = {}
     for field in partition_spec.fields:
-        field_name = [
-            column.name
-            for column in table_schema.fields
-            if column.field_id == field.source_id
-        ][0]
+        field_name = next(
+            iter(
+                [
+                    column.name
+                    for column in table_schema.fields
+                    if column.field_id == field.source_id
+                ]
+            )
+        )
         partition_spec_fields[field.source_id] = field_name
     return partition_spec_fields
 
