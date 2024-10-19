@@ -28,3 +28,9 @@ The following catalog backends are currently implemented.
 The following engines are currently implemented.
 
 - arrow
+
+## To do
+
+- Fix concurrent write operations error
+- Add additional configuration options
+  + Schema update error or update

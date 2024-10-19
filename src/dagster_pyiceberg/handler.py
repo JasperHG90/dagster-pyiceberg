@@ -136,14 +136,18 @@ class PartitionUpdateDiffer:
     @property
     def table_slice_partition_dimensions(self) -> Sequence[TablePartitionDimension]:
         # In practice, partition_dimensions is an empty list and not None
-        if (
+        partition_dimensions: Sequence[TablePartitionDimension] | None = None
+        if not (
             self.table_slice.partition_dimensions is None
             or len(self.table_slice.partition_dimensions) == 0
         ):
+            partition_dimensions = self.table_slice.partition_dimensions
+        if partition_dimensions is None:
             raise ValueError(
                 "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice."
             )
-        return self.table_slice.partition_dimensions  # type: ignore
+        else:
+            return partition_dimensions
 
     @property
     def iceberg_table_partition_field_names(self) -> Dict[int, str]:
@@ -205,34 +209,36 @@ def _table_writer(
     table_slice: TableSlice, data: ArrowTypes, catalog: CatalogTypes
 ) -> None:
     table_path = f"{table_slice.schema}.{table_slice.table}"
-    # In practice, partition_dimensions is an empty list and not None
+    # In practice, partition_dimensions is an empty list for unpartitioned assets and not None
+    #  even though it's the default value. To pass the static type checker, we need to ensure
+    #  that table_slice.partition_dimensions is not None or an empty list.
+    partition_exprs: List[str] | None = None
+    partition_dimensions: Sequence[TablePartitionDimension] | None = None
     if (
-        table_slice.partition_dimensions is None
-        or len(table_slice.partition_dimensions) == 0
+        table_slice.partition_dimensions is not None
+        and len(table_slice.partition_dimensions) != 0
     ):
-        raise ValueError(
-            "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice."
-        )
-    partition_exprs = [p.partition_expr for p in table_slice.partition_dimensions]
-    if any(p is None for p in partition_exprs):
-        raise ValueError(
-            f"Could not map partition to partition expr, got '{partition_exprs}'. Did you name your partitions correctly and provided the correct 'partition_expr' in the asset metadata?"
-        )
+        partition_exprs = [p.partition_expr for p in table_slice.partition_dimensions]
+        if any(p is None for p in partition_exprs):
+            raise ValueError(
+                f"Could not map partition to partition expr, got '{partition_exprs}'."
+                "Did you name your partitions correctly and provided the correct"
+                "'partition_expr' in the asset metadata?"
+            )
+        partition_dimensions = table_slice.partition_dimensions
     if catalog.table_exists(table_path):
         table = catalog.load_table(table_path)
-
         # Check if partitions match. If not, update
         #  But this should be a configuration option per table
-        if table_slice.partition_dimensions is not None:
-            if len(table_slice.partition_dimensions) != 0:
-                _update_table_spec(
-                    table=table,
-                    partition_dimensions=PartitionUpdateDiffer(
-                        table_slice=table_slice,
-                        iceberg_table_schema=table.schema(),
-                        iceberg_partition_spec=table.spec(),
-                    ).diff(),
-                )
+        if partition_dimensions is not None:
+            _update_table_spec(
+                table=table,
+                partition_dimensions=PartitionUpdateDiffer(
+                    table_slice=table_slice,
+                    iceberg_table_schema=table.schema(),
+                    iceberg_partition_spec=table.spec(),
+                ).diff(),
+            )
     else:
         table = catalog.create_table(
             table_path,
@@ -242,17 +248,15 @@ def _table_writer(
         #  and these need transforms
         # We can base them on the partition dimensions, but optionally we can allow users
         #  to pass these as metadata to the asset
-        if len(table_slice.partition_dimensions) != 0:
-            _update_table_spec(
-                table=table, partition_dimensions=table_slice.partition_dimensions
-            )
+        if partition_dimensions is not None:
+            _update_table_spec(table=table, partition_dimensions=partition_dimensions)
 
     row_filter: E.BooleanExpression
-    if len(table_slice.partition_dimensions) != 0:
+    if partition_dimensions is not None:
         row_filter = _get_row_filter(
             iceberg_table_schema=table.schema(),
             iceberg_partition_spec=table.spec(),
-            dagster_partition_dimensions=table_slice.partition_dimensions,
+            dagster_partition_dimensions=partition_dimensions,
         )
     else:
         row_filter = iceberg_table.ALWAYS_TRUE
@@ -371,10 +375,7 @@ def partition_dimensions_to_filters(
 
 def _table_reader(table_slice: TableSlice, catalog: CatalogTypes) -> table.DataScan:
     """Reads a table slice from an iceberg table and slices it according to partitioning (if present)"""
-    if (
-        table_slice.partition_dimensions is None
-        or len(table_slice.partition_dimensions) == 0
-    ):
+    if table_slice.partition_dimensions is None:
         raise ValueError(
             "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice."
         )

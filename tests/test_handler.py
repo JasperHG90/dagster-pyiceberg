@@ -223,6 +223,8 @@ def test_table_writer(catalog: SqlCatalog, data: pa.Table):
         table_slice=TableSlice(
             table="data_table_writer",
             schema="pytest",
+            # In assets that are not partitioned, this value is not None but an empty list.
+            #  bit confusing since the type is optional and default value is None
             partition_dimensions=[],
         ),
         data=data,
