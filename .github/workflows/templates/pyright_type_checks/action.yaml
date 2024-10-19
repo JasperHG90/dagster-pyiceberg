@@ -6,6 +6,9 @@ inputs:
         description: "Python version to use."
         required: false
         default: "3.11"
+    uv_version:
+        description: "uv version to use."
+        required: true
     pyright_version:
         description: "Pre-commit version to use."
         required: false
@@ -19,15 +22,15 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python_version }}
-    - name: Create virtual environment
-      run: python3 -m venv venv && source venv/bin/activate
-      shell: bash
-    - name: Install pyright
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        uv-version: ${{ inputs.uv_version }}
+    - name: install dependencies
       run: |
-        python3 -m pip install --upgrade pip
-        python3 -m pip install pyright==${{ inputs.pyright_version }}
+        uv sync --all-extras
       shell: bash
     - name: Run pyright
       run: |
-        python3 -m pyright
+        uv run pyright
       shell: bash
