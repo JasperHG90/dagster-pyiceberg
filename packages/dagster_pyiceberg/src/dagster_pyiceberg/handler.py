@@ -75,8 +75,11 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
     @abstractmethod
     def from_arrow(self, obj: table.DataScan, target_type: type) -> U: ...
 
+    # TODO: deltalake uses record batch reader, as `write_deltalake` takes this as
+    #  an input, see <https://delta-io.github.io/delta-rs/api/delta_writer/>
+    #  but this is not supported by pyiceberg I think. We need to check this.
     @abstractmethod
-    def to_arrow(self, obj: U) -> pa.RecordBatchReader: ...
+    def to_arrow(self, obj: U) -> pa.Table: ...
 
     def handle_output(
         self,
