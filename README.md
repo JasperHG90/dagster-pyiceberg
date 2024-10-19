@@ -34,4 +34,7 @@ The following engines are currently implemented.
 - Fix concurrent write operations error
 - Add additional configuration options
   + Schema update error or update DONE
-  + PartitionUpdateDiffer should also check if existing partitions are being updated (e.g. daily to hourly)
+- Updating partitions
+  + [Existing partitions](https://py.iceberg.apache.org/api/#partition-evolution)
+    + PartitionUpdateDiffer should also check if existing partitions are being updated (e.g. daily to hourly)
+  + [Removing partitions](https://py.iceberg.apache.org/api/#remove-fields)
