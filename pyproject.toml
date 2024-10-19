@@ -1,7 +1,7 @@
 [project]
 name = "dagster-pyiceberg-project"
 version = "0.0.0"
-description = "Dagster IO manager for PyIceberg."
+description = "Libraries that provide Dagster IO managers for PyIceberg."
 authors = [
   {name="Jasper Ginn", email="jasperginn@gmail.com"}
 ]
