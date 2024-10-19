@@ -1,5 +1,5 @@
 name: "Pyright type checks"
-description: "Template that runs pre-commit hooks"
+description: "Template that runs py"
 
 inputs:
     python_version:
@@ -9,10 +9,6 @@ inputs:
     uv_version:
         description: "uv version to use."
         required: true
-    pyright_version:
-        description: "Pre-commit version to use."
-        required: false
-        default: "3.1.1"
 
 runs:
   using: "composite"
