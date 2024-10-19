@@ -244,7 +244,7 @@ class IcebergToDagsterPartitionMapper:
             if p.partition_expr == self.updated_time_partition_field
         ]
 
-    def deleted(self) -> List[TablePartitionDimension]:
+    def deleted(self) -> List[str]:
         return list(
             set(self.iceberg_table_partition_field_names.values())
             - set(
