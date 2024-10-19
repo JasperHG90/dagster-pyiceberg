@@ -102,7 +102,7 @@ class IcebergDbClient(DbClient):
         yield catalog
 
 
-class BaseIcebergIOManager(ConfigurableIOManagerFactory):
+class IcebergIOManager(ConfigurableIOManagerFactory):
 
     name: str = Field(description="The name of the iceberg catalog.")
     config: Union[IcebergSqlCatalogConfig, IcebergRestCatalogConfig] = Field(

@@ -70,7 +70,7 @@ def diff_to_transformation(
                 )
 
 
-class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
+class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
 
     @abstractmethod
     def from_arrow(self, obj: table.DataScan, target_type: type) -> U: ...
@@ -113,7 +113,7 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
         )
 
 
-class IcebergPyArrowTypeHandler(IcebergBaseTypeHandler[ArrowTypes]):
+class IcebergPyArrowTypeHandler(IcebergBaseArrowTypeHandler[ArrowTypes]):
     def from_arrow(
         self, obj: table.DataScan, target_type: Type[ArrowTypes]
     ) -> ArrowTypes:
