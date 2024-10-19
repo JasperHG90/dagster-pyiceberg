@@ -28,7 +28,7 @@ jobs:
           pre_commit_version: "4.0.1"
           directory: "."
       - name: 'Pyright type checks'
-        run: ./.github/workflows/templates/pyright_type_checks
+        uses: ./.github/workflows/templates/pyright_type_checks
         with:
           python_version: "3.11"
           pyright_version: "1.1.385"
