@@ -265,6 +265,10 @@ def _table_writer(
     #  DELETE: In case existing Parquet files can be dropped completely.
     #  REPLACE: In case existing Parquet files need to be rewritten.
     #  APPEND: In case new data is being inserted into the table.
+
+    # TODO: use some sort of retry mechanism here
+    #  See: https://github.com/apache/iceberg-python/pull/330
+    #  See: https://github.com/apache/iceberg-python/issues/269
     table.overwrite(
         df=data,
         overwrite_filter=row_filter,
