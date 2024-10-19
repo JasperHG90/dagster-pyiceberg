@@ -1,18 +1,13 @@
 [project]
-name = "dagster-pyiceberg"
-version = "0.1.0"
-description = ""
+name = "dagster-pyiceberg-project"
+version = "0.0.0"
+description = "Dagster IO manager for PyIceberg."
 authors = [
   {name="Jasper Ginn", email="jasperginn@gmail.com"}
 ]
 requires-python = ">=3.10"
 readme = "README.md"
-dependencies = [
-    "pyiceberg[pyarrow]>=0.7.1",
-    "dagster>=1.8.2",
-    "dagit>=1.8.2",
-    "pendulum>=3.0.0",
-]
+dependencies = []
 
 [tool.uv]
 dev-dependencies = [
@@ -20,14 +15,21 @@ dev-dependencies = [
     "ipykernel>=6.29.5",
     "pytest>=8.3.2",
     "pyright>=1.1.385",
+    # These are added as dev dependencies becuase they should be available
+    #  when developing the project.
+    "dagster_pyiceberg",
+    "dagster_pyiceberg_dagster",
+]
+package = false
+
+[tool.uv.workspace]
+members = [
+  "packages/*"
 ]
 
 [tool.uv.sources]
-pyiceberg = { git = "https://github.com/apache/iceberg-python", rev = "09ec814" }
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+dagster_pyiceberg = { workspace = true }
+dagster_pyiceberg_pandas = { workspace = true }
 
 [tool.black]
 line-length = 88
@@ -73,7 +75,7 @@ extend-exclude = [
 cache_dir = "/home/vscode/workspace/.cache/pytest"
 
 [tool.pyright]
-include = ["src"]
+include = ["packages"]
 pythonVersion = "3.11"
 venvPath = "."
 venv = ".venv"
