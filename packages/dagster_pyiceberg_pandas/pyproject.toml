@@ -9,6 +9,7 @@ requires-python = ">=3.10"
 readme = "README.md"
 dependencies = [
     "dagster-pyiceberg",
+    "pandas>=2.2.3",
 ]
 
 [build-system]
