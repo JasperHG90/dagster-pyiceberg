@@ -132,11 +132,15 @@ class PartitionUpdateDiffer:
 
     @property
     def table_slice_partition_dimensions(self) -> Sequence[TablePartitionDimension]:
-        if self.table_slice.partition_dimensions is None:
+        # In practice, partition_dimensions is an empty list and not None
+        if (
+            self.table_slice.partition_dimensions is None
+            or len(self.table_slice.partition_dimensions) == 0
+        ):
             raise ValueError(
                 "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice."
             )
-        return self.table_slice.partition_dimensions
+        return self.table_slice.partition_dimensions  # type: ignore
 
     @property
     def iceberg_table_partition_field_names(self) -> Dict[int, str]:
@@ -198,8 +202,11 @@ def _table_writer(
     table_slice: TableSlice, data: ArrowTypes, catalog: catalog.MetastoreCatalog
 ) -> None:
     table_path = f"{table_slice.schema}.{table_slice.table}"
-    # Check partition_expr passed correctly
-    if table_slice.partition_dimensions is None:
+    # In practice, partition_dimensions is an empty list and not None
+    if (
+        table_slice.partition_dimensions is None
+        or len(table_slice.partition_dimensions) == 0
+    ):
         raise ValueError(
             "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice."
         )
@@ -213,15 +220,16 @@ def _table_writer(
 
         # Check if partitions match. If not, update
         #  But this should be a configuration option per table
-        if len(table_slice.partition_dimensions) != 0:
-            _update_table_spec(
-                table=table,
-                partition_dimensions=PartitionUpdateDiffer(
-                    table_slice=table_slice,
-                    iceberg_table_schema=table.schema(),
-                    iceberg_partition_spec=table.spec(),
-                ).diff(),
-            )
+        if table_slice.partition_dimensions is not None:
+            if len(table_slice.partition_dimensions) != 0:
+                _update_table_spec(
+                    table=table,
+                    partition_dimensions=PartitionUpdateDiffer(
+                        table_slice=table_slice,
+                        iceberg_table_schema=table.schema(),
+                        iceberg_partition_spec=table.spec(),
+                    ).diff(),
+                )
     else:
         table = catalog.create_table(
             table_path,
@@ -362,11 +370,18 @@ def _table_reader(
     table_slice: TableSlice, catalog: catalog.MetastoreCatalog
 ) -> table.DataScan:
     """Reads a table slice from an iceberg table and slices it according to partitioning (if present)"""
+    if (
+        table_slice.partition_dimensions is None
+        or len(table_slice.partition_dimensions) == 0
+    ):
+        raise ValueError(
+            "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice."
+        )
     table_name = f"{table_slice.schema}.{table_slice.table}"
     table = catalog.load_table(table_name)
-
     selected_fields = table_slice.columns if table_slice.columns is not None else ("*",)
     row_filter: E.BooleanExpression
+    # In practice, this is an empty list, not None. This screws up the type checker.
     if len(table_slice.partition_dimensions) != 0:
         row_filter = _get_row_filter(
             iceberg_table_schema=table.schema(),
