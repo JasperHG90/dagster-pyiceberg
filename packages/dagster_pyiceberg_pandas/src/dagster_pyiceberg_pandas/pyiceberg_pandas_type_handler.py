@@ -25,7 +25,7 @@ class IcebergPandasTypeHandler(IcebergBaseArrowTypeHandler[pd.DataFrame]):
         return [pd.DataFrame]
 
 
-class DeltaLakePandasIOManager(IcebergIOManager):
+class IcebergPandasIOManager(IcebergIOManager):
     @staticmethod
     def type_handlers() -> Sequence[DbTypeHandler]:
         return [IcebergPandasTypeHandler(), IcebergPyArrowTypeHandler()]
