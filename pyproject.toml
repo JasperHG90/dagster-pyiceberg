@@ -7,7 +7,9 @@ authors = [
 ]
 requires-python = ">=3.10"
 readme = "README.md"
-dependencies = []
+dependencies = [
+    "tenacity>=8.5.0",
+]
 
 [tool.uv]
 dev-dependencies = [
