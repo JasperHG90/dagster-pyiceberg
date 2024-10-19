@@ -6,6 +6,7 @@ import pyarrow.compute as pc
 import pytest
 from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
+from dagster_pyiceberg import handler
 from pyiceberg import expressions as E
 from pyiceberg import partitioning as iceberg_partitioning
 from pyiceberg import schema as iceberg_schema
@@ -13,8 +14,6 @@ from pyiceberg import table as iceberg_table
 from pyiceberg import transforms
 from pyiceberg import types as T
 from pyiceberg.catalog.sql import SqlCatalog
-
-from dagster_pyiceberg import handler
 
 
 @pytest.fixture()

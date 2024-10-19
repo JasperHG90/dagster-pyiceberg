@@ -11,9 +11,8 @@ from dagster import (
     asset,
     materialize,
 )
-from pyiceberg.catalog.sql import SqlCatalog
-
 from dagster_pyiceberg import IcebergPyarrowIOManager, IcebergSqlCatalogConfig
+from pyiceberg.catalog.sql import SqlCatalog
 
 
 @pytest.fixture
