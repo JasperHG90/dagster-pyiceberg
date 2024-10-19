@@ -72,3 +72,7 @@ extend-exclude = [
 
 [tool.pytest.ini_options]
 cache_dir = "/home/vscode/workspace/.cache/pytest"
+
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.11"
