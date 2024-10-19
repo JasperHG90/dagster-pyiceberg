@@ -36,9 +36,13 @@ repos:
       - id: isort
         args: ["--profile", "black", "--filter-files"]
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.8.0
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies: ['types-PyYAML', 'types-decorator', 'types-requests', 'types-pytz', 'types-cachetools']
+  - repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.385
     hooks:
-      - id: mypy
-        additional_dependencies: ['types-PyYAML', 'types-decorator', 'types-requests', 'types-pytz', 'types-cachetools']
+    - id: pyright
 exclude: 'static/'

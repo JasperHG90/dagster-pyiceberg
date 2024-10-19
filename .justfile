@@ -1,5 +1,6 @@
 alias s := setup
 alias t := test
+alias c := typecheck
 alias p := pre_commit
 
 # Install python dependencies
@@ -20,3 +21,6 @@ pre_commit:
 # Run pytest
 test:
   uv run pytest
+
+typecheck:
+  uv run pyright
