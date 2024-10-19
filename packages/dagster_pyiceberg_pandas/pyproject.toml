@@ -1,0 +1,16 @@
+[project]
+name = "dagster-pyiceberg-pandas"
+version = "0.0.0"
+description = "Package for storing Pandas DataFrames in PyIceberg tables."
+authors = [
+  {name="Jasper Ginn", email="jasperginn@gmail.com"}
+]
+requires-python = ">=3.10"
+readme = "README.md"
+dependencies = [
+    "dagster-pyiceberg",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
