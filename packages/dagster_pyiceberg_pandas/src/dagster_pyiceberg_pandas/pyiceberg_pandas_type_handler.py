@@ -17,8 +17,8 @@ class IcebergPandasTypeHandler(IcebergBaseArrowTypeHandler[pd.DataFrame]):
     ) -> pd.DataFrame:
         return obj.to_pandas()
 
-    def to_arrow(self, obj: pd.DataFrame) -> pa.RecordBatchReader:
-        return pa.Table.from_pandas(obj).to_reader()
+    def to_arrow(self, obj: pd.DataFrame) -> pa.Table:
+        return pa.Table.from_pandas(obj)
 
     @property
     def supported_types(self) -> Sequence[Type[object]]:
