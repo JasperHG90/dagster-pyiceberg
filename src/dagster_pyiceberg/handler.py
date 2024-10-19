@@ -146,8 +146,7 @@ class PartitionUpdateDiffer:
             raise ValueError(
                 "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice."
             )
-        else:
-            return partition_dimensions
+        return partition_dimensions
 
     @property
     def iceberg_table_partition_field_names(self) -> Dict[int, str]:
