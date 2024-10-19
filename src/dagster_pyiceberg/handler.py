@@ -24,13 +24,14 @@ from dagster._core.storage.db_io_manager import (
     TablePartitionDimension,
     TableSlice,
 )
-from pyiceberg import catalog
 from pyiceberg import expressions as E
 from pyiceberg import partitioning, schema
 from pyiceberg import table
 from pyiceberg import table as iceberg_table
 from pyiceberg import transforms
 from pyiceberg import types as T
+from pyiceberg.catalog.rest import RestCatalog
+from pyiceberg.catalog.sql import SqlCatalog
 from pyiceberg.partitioning import PartitionSpec
 from pyiceberg.schema import Schema
 
@@ -40,6 +41,7 @@ time_partition_dt_types = (T.TimestampType, T.DateType)
 partition_types = T.StringType
 
 ArrowTypes = Union[pa.Table, pa.RecordBatchReader]
+CatalogTypes = Union[SqlCatalog, RestCatalog]
 
 
 def date_diff(start: dt.datetime, end: dt.datetime) -> pendulum.Interval:
@@ -81,7 +83,7 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
         context: OutputContext,
         table_slice: TableSlice,
         obj: U,
-        connection: catalog.MetastoreCatalog,
+        connection: CatalogTypes,
     ):
         """Stores pyarrow types in Iceberg table"""
         metadata = context.definition_metadata or {}  # noqa
@@ -93,7 +95,7 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
         self,
         context: InputContext,
         table_slice: TableSlice,
-        connection: catalog.MetastoreCatalog,
+        connection: CatalogTypes,
     ) -> U:
         """Loads the input as a pyarrow Table"""
         return self.from_arrow(
@@ -200,7 +202,7 @@ def _get_row_filter(
 
 
 def _table_writer(
-    table_slice: TableSlice, data: ArrowTypes, catalog: catalog.MetastoreCatalog
+    table_slice: TableSlice, data: ArrowTypes, catalog: CatalogTypes
 ) -> None:
     table_path = f"{table_slice.schema}.{table_slice.table}"
     # In practice, partition_dimensions is an empty list and not None
@@ -367,9 +369,7 @@ def partition_dimensions_to_filters(
     return partition_filters
 
 
-def _table_reader(
-    table_slice: TableSlice, catalog: catalog.MetastoreCatalog
-) -> table.DataScan:
+def _table_reader(table_slice: TableSlice, catalog: CatalogTypes) -> table.DataScan:
     """Reads a table slice from an iceberg table and slices it according to partitioning (if present)"""
     if (
         table_slice.partition_dimensions is None

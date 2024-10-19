@@ -22,11 +22,11 @@ from dagster._core.storage.db_io_manager import (
     TableSlice,
 )
 from pydantic import Field
-from pyiceberg.catalog import MetastoreCatalog
 from pyiceberg.catalog.rest import RestCatalog
 from pyiceberg.catalog.sql import SqlCatalog
 
 from .config import IcebergRestCatalogConfig, IcebergSqlCatalogConfig  # noqa
+from .handler import CatalogTypes
 
 
 class _IcebergCatalogProperties(TypedDict):
@@ -50,12 +50,12 @@ class IcebergDbClient(DbClient):
 
     @staticmethod
     def delete_table_slice(
-        context: OutputContext, table_slice: TableSlice, connection: MetastoreCatalog
+        context: OutputContext, table_slice: TableSlice, connection: CatalogTypes
     ) -> None: ...
 
     @staticmethod
     def ensure_schema_exists(
-        context: OutputContext, table_slice: TableSlice, connection: MetastoreCatalog
+        context: OutputContext, table_slice: TableSlice, connection: CatalogTypes
     ) -> None: ...
 
     @staticmethod
@@ -76,7 +76,7 @@ class IcebergDbClient(DbClient):
 
     @staticmethod
     @contextmanager
-    def connect(context, table_slice: TableSlice) -> Iterator[MetastoreCatalog]:
+    def connect(context, table_slice: TableSlice) -> Iterator[CatalogTypes]:
         resource_config = cast(
             _IcebergTableIOManagerResourceConfig, context.resource_config
         )
