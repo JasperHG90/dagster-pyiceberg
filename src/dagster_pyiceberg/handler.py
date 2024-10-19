@@ -139,6 +139,10 @@ class PartitionUpdateDiffer:
 
     @property
     def dagster_partition_dimension_names(self) -> List[str]:
+        if self.table_slice.partition_dimensions is None:
+            raise ValueError(
+                "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice."
+            )
         return [p.partition_expr for p in self.table_slice.partition_dimensions]
 
     @property
