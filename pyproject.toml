@@ -19,6 +19,7 @@ dev-dependencies = [
     #  when developing the project.
     "dagster_pyiceberg",
     "dagster_pyiceberg_pandas",
+    "pytest-coverage>=0.0",
 ]
 package = false
 
