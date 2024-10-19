@@ -70,7 +70,7 @@ def diff_to_transformation(
 class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
 
     @abstractmethod
-    def from_arrow(self, obj: table.DataScan, target_type: type): ...
+    def from_arrow(self, obj: table.DataScan, target_type: type) -> U: ...
 
     @abstractmethod
     def to_arrow(self, obj: U) -> pa.RecordBatchReader: ...
@@ -80,23 +80,23 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
         context: OutputContext,
         table_slice: TableSlice,
         obj: U,
-        catalog: catalog.MetastoreCatalog,
+        connection: catalog.MetastoreCatalog,
     ):
         """Stores pyarrow types in Iceberg table"""
         metadata = context.definition_metadata or {}  # noqa
         data = self.to_arrow(obj)
 
-        _table_writer(table_slice=table_slice, data=data, catalog=catalog)
+        _table_writer(table_slice=table_slice, data=data, catalog=connection)
 
     def load_input(
         self,
         context: InputContext,
         table_slice: TableSlice,
-        catalog: catalog.MetastoreCatalog,
+        connection: catalog.MetastoreCatalog,
     ) -> U:
         """Loads the input as a pyarrow Table"""
         return self.from_arrow(
-            _table_reader(table_slice=table_slice, catalog=catalog),
+            _table_reader(table_slice=table_slice, catalog=connection),
             context.dagster_type.typing_type,
         )
 
