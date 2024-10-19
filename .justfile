@@ -20,7 +20,7 @@ pre_commit:
 
 # Run pytest
 test:
-  uv run pytest
+  uv run pytest tests
 
 typecheck:
   uv run pyright

@@ -18,7 +18,7 @@ dev-dependencies = [
     # These are added as dev dependencies becuase they should be available
     #  when developing the project.
     "dagster_pyiceberg",
-    "dagster_pyiceberg_dagster",
+    "dagster_pyiceberg_pandas",
 ]
 package = false
 
