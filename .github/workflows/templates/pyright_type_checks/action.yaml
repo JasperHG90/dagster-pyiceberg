@@ -1,5 +1,5 @@
 name: "Pyright type checks"
-description: "Template that runs py"
+description: "Template that runs pyright type checks"
 
 inputs:
     python_version:
@@ -8,6 +8,9 @@ inputs:
         default: "3.11"
     uv_version:
         description: "uv version to use."
+        required: true
+    pyright_version:
+        description: "Pyright version to use."
         required: true
 
 runs:
