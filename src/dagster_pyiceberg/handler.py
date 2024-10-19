@@ -8,6 +8,7 @@ from typing import (
     Optional,
     Sequence,
     Set,
+    Tuple,
     Type,
     TypeVar,
     Union,
@@ -379,7 +380,9 @@ def _table_reader(
         )
     table_name = f"{table_slice.schema}.{table_slice.table}"
     table = catalog.load_table(table_name)
-    selected_fields = table_slice.columns if table_slice.columns is not None else ("*",)
+    selected_fields: Tuple[str, ...] = (
+        tuple(table_slice.columns) if table_slice.columns is not None else ("*",)
+    )
     row_filter: E.BooleanExpression
     # In practice, this is an empty list, not None. This screws up the type checker.
     if len(table_slice.partition_dimensions) != 0:
