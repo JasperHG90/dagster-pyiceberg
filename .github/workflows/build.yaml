@@ -1,0 +1,41 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: main
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: 'checks'
+        uses: ./.github/workflows/templates/checks
+        with:
+          python_version: "3.11"
+          pre_commit_version: "4.0.1"
+          directory: "."
+  tests:
+    runs-on: ubuntu-latest
+    needs: checks
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: 'tests'
+        uses: ./.github/workflows/templates/tests
+        with:
+          python_version: "3.11"
+          uv_version: "0.4.12"
+          directory: "."
