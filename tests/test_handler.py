@@ -155,26 +155,26 @@ def test_partitioned_table_reader(
     catalog: SqlCatalog, partitioned_table_slice: TableSlice
 ):
     table_ = handler._table_reader(partitioned_table_slice, catalog)
-    df = table_.to_pandas()
-    assert df["timestamp"].min() >= dt.datetime(2023, 1, 1, 0)
-    assert df["timestamp"].max() < dt.datetime(2023, 1, 1, 1)
-    assert df["category"].unique().tolist() == ["A"]
+    data_ = table_.to_arrow().to_pydict()
+    assert min(data_["timestamp"]) >= dt.datetime(2023, 1, 1, 0)
+    assert max(data_["timestamp"]) < dt.datetime(2023, 1, 1, 1)
+    assert list(set(data_["category"])) == ["A"]
 
 
 def test_table_reader(catalog: SqlCatalog, table_slice: TableSlice):
     table_ = handler._table_reader(table_slice, catalog)
-    df = table_.to_pandas()
-    assert df.shape[0] == 1440
+    data_ = table_.to_arrow().to_pydict()
+    assert len(data_["timestamp"]) == 1440
 
 
 def test_table_reader_with_selected_columns(
     catalog: SqlCatalog, table_slice_with_selected_columns: TableSlice
 ):
     table_ = handler._table_reader(table_slice_with_selected_columns, catalog)
-    df = table_.to_pandas()
-    assert df.shape[0] == 1440
-    assert df.shape[1] == 1
-    assert df.columns == ["value"]
+    data_ = table_.to_arrow().to_pydict()
+    assert len(data_["value"]) == 1440
+    assert len(data_) == 1
+    assert list(data_.keys()) == ["value"]
 
 
 @pytest.mark.parametrize(
