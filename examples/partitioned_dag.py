@@ -4,9 +4,8 @@ import time
 import numpy as np
 import pyarrow as pa
 from dagster import DailyPartitionsDefinition, Definitions, Jitter, RetryPolicy, asset
-from pyiceberg.catalog.sql import SqlCatalog
-
 from dagster_pyiceberg import IcebergPyarrowIOManager, IcebergSqlCatalogConfig
+from pyiceberg.catalog.sql import SqlCatalog
 
 CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/dag/warehouse/catalog.db"
 CATALOG_WAREHOUSE = "file:///home/vscode/workspace/.tmp/dag/warehouse"

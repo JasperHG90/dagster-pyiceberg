@@ -57,6 +57,7 @@ extend_skip = [".notebooks", ".nox", ".venv"]
 [tool.mypy]
 exclude = "^.notebooks/"
 ignore_missing_imports = true
+explicit_package_bases = true
 
 [tool.bandit]
 skips = ['B101']
