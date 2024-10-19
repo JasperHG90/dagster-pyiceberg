@@ -27,6 +27,7 @@ def io_manager(tmp_path) -> IcebergPyarrowIOManager:
             }
         ),
         schema="dagster",
+        schema_update_mode="error",
     )
 
 

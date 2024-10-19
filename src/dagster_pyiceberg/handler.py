@@ -87,9 +87,18 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
     ):
         """Stores pyarrow types in Iceberg table"""
         metadata = context.definition_metadata or {}  # noqa
+        resource_config = context.resource_config or {}  # noqa
+
+        schema_update_mode = resource_config["schema_update_mode"]
+
         data = self.to_arrow(obj)
 
-        _table_writer(table_slice=table_slice, data=data, catalog=connection)
+        _table_writer(
+            table_slice=table_slice,
+            data=data,
+            catalog=connection,
+            schema_update_mode=schema_update_mode,
+        )
 
     def load_input(
         self,
@@ -205,7 +214,10 @@ def _get_row_filter(
 
 
 def _table_writer(
-    table_slice: TableSlice, data: ArrowTypes, catalog: CatalogTypes
+    table_slice: TableSlice,
+    data: ArrowTypes,
+    catalog: CatalogTypes,
+    schema_update_mode: str,
 ) -> None:
     table_path = f"{table_slice.schema}.{table_slice.table}"
     # In practice, partition_dimensions is an empty list for unpartitioned assets and not None
@@ -230,13 +242,18 @@ def _table_writer(
         # Check if partitions match. If not, update
         #  But this should be a configuration option per table
         if partition_dimensions is not None:
+            new_partition_dimensions = PartitionUpdateDiffer(
+                table_slice=table_slice,
+                iceberg_table_schema=table.schema(),
+                iceberg_partition_spec=table.spec(),
+            ).diff()
+            if schema_update_mode == "error" and len(new_partition_dimensions) > 0:
+                raise ValueError(
+                    f"Partition dimensions do not match. New partitions: {new_partition_dimensions}"
+                )
             _update_table_spec(
                 table=table,
-                partition_dimensions=PartitionUpdateDiffer(
-                    table_slice=table_slice,
-                    iceberg_table_schema=table.schema(),
-                    iceberg_partition_spec=table.spec(),
-                ).diff(),
+                partition_dimensions=new_partition_dimensions,  # May be empty
             )
     else:
         table = catalog.create_table(

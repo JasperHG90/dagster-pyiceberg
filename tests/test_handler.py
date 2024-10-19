@@ -229,6 +229,7 @@ def test_table_writer(catalog: SqlCatalog, data: pa.Table):
         ),
         data=data,
         catalog=catalog,
+        schema_update_mode="update",
     )
     assert catalog.table_exists("pytest.data_table_writer")
 
@@ -253,6 +254,7 @@ def test_table_writer_partitioned(catalog: SqlCatalog, data: pa.Table):
         ),
         data=data,
         catalog=catalog,
+        schema_update_mode="update",
     )
     table = catalog.load_table("pytest.data_table_writer_partitioned")
     partition_field_names = [f.name for f in table.spec().fields]
@@ -285,6 +287,7 @@ def test_table_writer_multi_partitioned(catalog: SqlCatalog, data: pa.Table):
         ),
         data=data,
         catalog=catalog,
+        schema_update_mode="update",
     )
     table = catalog.load_table("pytest.data_table_writer_multi_partitioned")
     partition_field_names = [f.name for f in table.spec().fields]
@@ -319,6 +322,7 @@ def test_table_writer_multi_partitioned_update(catalog: SqlCatalog, data: pa.Tab
         ),
         data=data,
         catalog=catalog,
+        schema_update_mode="update",
     )
     table = catalog.load_table("pytest.data_multi_partitioned_update")
     data_out = (
@@ -353,6 +357,7 @@ def test_table_writer_multi_partitioned_update_schema_change(
         ),
         data=data,
         catalog=catalog,
+        schema_update_mode="update",
     )
     data_ = data.filter(
         (pc.field("category") == "A")
@@ -376,6 +381,7 @@ def test_table_writer_multi_partitioned_update_schema_change(
         ),
         data=data_,
         catalog=catalog,
+        schema_update_mode="update",
     )
     path_to_dwh = (
         plb.Path(warehouse_path)

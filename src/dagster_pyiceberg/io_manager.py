@@ -1,3 +1,4 @@
+import enum
 from abc import abstractmethod
 from contextlib import contextmanager  # noqa
 from typing import (  # noqa
@@ -29,6 +30,11 @@ from .config import IcebergRestCatalogConfig, IcebergSqlCatalogConfig  # noqa
 from .handler import CatalogTypes
 
 
+class SchemaUpdateMode(enum.Enum):
+    error = "error"
+    update = "update"
+
+
 class _IcebergCatalogProperties(TypedDict):
 
     properties: Dict[str, str]
@@ -44,6 +50,7 @@ class _IcebergTableIOManagerResourceConfig(TypedDict):
 
     name: str
     config: _IcebergMetastoreCatalogConfig
+    schema_update_mode: SchemaUpdateMode
 
 
 class IcebergDbClient(DbClient):
@@ -97,16 +104,20 @@ class IcebergDbClient(DbClient):
 
 class BaseIcebergIOManager(ConfigurableIOManagerFactory):
 
-    name: str = Field(description="The name of the iceberg catalog")
+    name: str = Field(description="The name of the iceberg catalog.")
     config: Union[IcebergSqlCatalogConfig, IcebergRestCatalogConfig] = Field(
         discriminator="type",
-        description="Additional configuration properties for the iceberg catalog",
+        description="Additional configuration properties for the iceberg catalog.",
     )
     schema_: Optional[str] = Field(
         default=None,
         alias="schema",
         description="Name of the iceberg catalog schema to use.",
     )  # schema is a reserved word for pydantic
+    schema_update_mode: SchemaUpdateMode = Field(
+        default=SchemaUpdateMode.error,
+        description="Logic to use when updating an iceberg table with non-matching dagster partitions.",
+    )
 
     @staticmethod
     @abstractmethod
