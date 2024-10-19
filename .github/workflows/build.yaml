@@ -21,12 +21,17 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
-      - name: 'checks'
+      - name: 'Pre-commit checks'
         uses: ./.github/workflows/templates/checks
         with:
           python_version: "3.11"
           pre_commit_version: "4.0.1"
           directory: "."
+      - name: 'Pyright type checks'
+        run: ./.github/workflows/templates/pyright_type_checks
+        with:
+          python_version: "3.11"
+          pyright_version: "1.1.385"
   tests:
     runs-on: ubuntu-latest
     needs: checks

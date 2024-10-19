@@ -1,0 +1,33 @@
+name: "Pyright type checks"
+description: "Template that runs pre-commit hooks"
+
+inputs:
+    python_version:
+        description: "Python version to use."
+        required: false
+        default: "3.11"
+    pyright_version:
+        description: "Pre-commit version to use."
+        required: false
+        default: "3.1.1"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python_version }}
+    - name: Create virtual environment
+      run: python3 -m venv venv && source venv/bin/activate
+      shell: bash
+    - name: Install pyright
+      run: |
+        python3 -m pip install --upgrade pip
+        python3 -m pip install pyright==${{ inputs.pyright_version }}
+      shell: bash
+    - name: Run pyright
+      run: |
+        python3 -m pyright
+      shell: bash
