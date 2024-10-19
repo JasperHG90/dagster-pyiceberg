@@ -449,7 +449,7 @@ def test_table_writer_multi_partitioned_update_schema_change_error(
         )
 
 
-def test_partition_update_differ_has_updates():
+def test_iceberg_to_dagster_partition_mapper_new_fields():
     schema = iceberg_schema.Schema(
         T.NestedField(
             1,
@@ -490,7 +490,7 @@ def test_partition_update_differ_has_updates():
     assert new_partitions[0].partition_expr == "category"
 
 
-def test_partition_update_differ_changed_time_partition():
+def test_iceberg_to_dagster_partition_mapper_changed_time_partition():
     schema = iceberg_schema.Schema(
         T.NestedField(
             1,
@@ -528,7 +528,7 @@ def test_partition_update_differ_changed_time_partition():
     assert updated_partitions[0].partition_expr == "timestamp"
 
 
-def test_partition_update_differ_deleted():
+def test_iceberg_to_dagster_partition_mapper_deleted():
     schema = iceberg_schema.Schema(
         T.NestedField(
             1,
