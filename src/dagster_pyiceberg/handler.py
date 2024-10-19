@@ -131,6 +131,14 @@ class PartitionUpdateDiffer:
         self.table_slice = table_slice
 
     @property
+    def table_slice_partition_dimensions(self) -> Sequence[TablePartitionDimension]:
+        if self.table_slice.partition_dimensions is None:
+            raise ValueError(
+                "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice."
+            )
+        return self.table_slice.partition_dimensions
+
+    @property
     def iceberg_table_partition_field_names(self) -> Dict[int, str]:
         return map_partition_spec_to_fields(
             partition_spec=self.iceberg_partition_spec,
@@ -139,11 +147,7 @@ class PartitionUpdateDiffer:
 
     @property
     def dagster_partition_dimension_names(self) -> List[str]:
-        if self.table_slice.partition_dimensions is None:
-            raise ValueError(
-                "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice."
-            )
-        return [p.partition_expr for p in self.table_slice.partition_dimensions]
+        return [p.partition_expr for p in self.table_slice_partition_dimensions]
 
     @property
     def get_new_partition_field_names(self) -> Set[str]:
@@ -154,7 +158,7 @@ class PartitionUpdateDiffer:
     def diff(self) -> List[TablePartitionDimension]:
         return [
             p
-            for p in self.table_slice.partition_dimensions
+            for p in self.table_slice_partition_dimensions
             if p.partition_expr in self.get_new_partition_field_names
         ]
 
@@ -195,6 +199,10 @@ def _table_writer(
 ) -> None:
     table_path = f"{table_slice.schema}.{table_slice.table}"
     # Check partition_expr passed correctly
+    if table_slice.partition_dimensions is None:
+        raise ValueError(
+            "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice."
+        )
     partition_exprs = [p.partition_expr for p in table_slice.partition_dimensions]
     if any(p is None for p in partition_exprs):
         raise ValueError(
@@ -282,13 +290,13 @@ def _time_window_partition_filter(
     ]
 
 
-def _partition_filter(table_partition: TablePartitionDimension):  # return type
+def _partition_filter(table_partition: TablePartitionDimension) -> E.BooleanExpression:
     partition = cast(Sequence[str], table_partition.partitions)
     if len(partition) > 1:
         raise NotImplementedError(
             f"Array partition values are not yet supported: '{str(T.StringType)}' / {partition}"
         )
-    return E.EqualTo(table_partition.partition_expr, table_partition.partitions[0])
+    return E.EqualTo(table_partition.partition_expr, table_partition.partitions[0])  # type: ignore
 
 
 def map_partition_spec_to_fields(
@@ -317,13 +325,14 @@ def partition_dimensions_to_filters(
 ) -> List[E.BooleanExpression]:
     """Converts dagster partitions to iceberg filters"""
     partition_filters = []
+    partition_spec_fields: Optional[Dict[int, str]] = None
     if table_partition_spec is not None:  # Only None when writing new tables
         partition_spec_fields = map_partition_spec_to_fields(
             partition_spec=table_partition_spec, table_schema=table_schema
         )
     for partition_dimension in partition_dimensions:
         field = table_schema.find_field(partition_dimension.partition_expr)
-        if table_partition_spec is not None:
+        if partition_spec_fields is not None:
             if field.field_id not in partition_spec_fields.keys():
                 raise ValueError(
                     f"Table is not partitioned by field '{field.name}' with id '{field.field_id}'. Available partition fields: {partition_spec_fields}"
