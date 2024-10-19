@@ -257,7 +257,7 @@ def test_table_writer_partitioned(catalog: SqlCatalog, data: pa.Table):
     )
     table = catalog.load_table("pytest.data_table_writer_partitioned")
     partition_field_names = [f.name for f in table.spec().fields]
-    assert partition_field_names == ["timestamp_hour"]
+    assert partition_field_names == ["timestamp"]
     assert len(table.scan().to_arrow().to_pydict()["value"]) == 60
 
 
@@ -290,7 +290,7 @@ def test_table_writer_multi_partitioned(catalog: SqlCatalog, data: pa.Table):
     )
     table = catalog.load_table("pytest.data_table_writer_multi_partitioned")
     partition_field_names = [f.name for f in table.spec().fields]
-    assert partition_field_names == ["timestamp_hour", "category"]
+    assert partition_field_names == ["timestamp", "category"]
     assert len(table.scan().to_arrow().to_pydict()["value"]) == 23
 
 
@@ -387,7 +387,7 @@ def test_table_writer_multi_partitioned_update_schema_change(
         / "pytest.db"
         / "data_multi_partitioned_update_schema_change"
         / "data"
-        / "timestamp_hour=2023-01-01-00"
+        / "timestamp=2023-01-01-00"
     )
     categories = sorted([p.name for p in path_to_dwh.glob("*") if p.is_dir()])
     assert categories == ["category=A", "category=B", "category=C"]
@@ -449,7 +449,7 @@ def test_table_writer_multi_partitioned_update_schema_change_error(
         )
 
 
-def test_partition_update_differ_no_changes():
+def test_partition_update_differ_has_updates():
     schema = iceberg_schema.Schema(
         T.NestedField(
             1,
@@ -481,10 +481,84 @@ def test_partition_update_differ_no_changes():
             ),
         ],
     )
-    new_partitions = handler.PartitionUpdateDiffer(
+    new_partitions = handler.IcebergToDagsterPartitionMapper(
         iceberg_table_schema=schema,
         iceberg_partition_spec=spec,
         table_slice=table_slice,
     ).diff()
     assert len(new_partitions) == 1
     assert new_partitions[0].partition_expr == "category"
+
+
+def test_partition_update_differ_changed_time_partition():
+    schema = iceberg_schema.Schema(
+        T.NestedField(
+            1,
+            "timestamp",
+            T.TimestampType(),
+        ),
+        T.NestedField(
+            2,
+            "category",
+            T.StringType(),
+        ),
+    )
+    spec = iceberg_partitioning.PartitionSpec(
+        iceberg_partitioning.PartitionField(
+            1, 1, name="timestamp", transform=transforms.HourTransform()
+        ),
+    )
+    table_slice = TableSlice(
+        table="data_multi_partitioned_update_schema_change",
+        schema="pytest",
+        partition_dimensions=[
+            # Changed from hourly to daily
+            TablePartitionDimension(
+                "timestamp",
+                TimeWindow(dt.datetime(2023, 1, 1), dt.datetime(2023, 1, 2)),
+            ),
+        ],
+    )
+    updated_partitions = handler.IcebergToDagsterPartitionMapper(
+        iceberg_table_schema=schema,
+        iceberg_partition_spec=spec,
+        table_slice=table_slice,
+    ).updated()
+    assert len(updated_partitions) == 1
+    assert updated_partitions[0].partition_expr == "timestamp"
+
+
+def test_partition_update_differ_deleted():
+    schema = iceberg_schema.Schema(
+        T.NestedField(
+            1,
+            "timestamp",
+            T.TimestampType(),
+        ),
+        T.NestedField(
+            2,
+            "category",
+            T.StringType(),
+        ),
+    )
+    spec = iceberg_partitioning.PartitionSpec(
+        iceberg_partitioning.PartitionField(
+            1, 1, name="timestamp", transform=transforms.HourTransform()
+        ),
+        iceberg_partitioning.PartitionField(
+            2, 2, name="category", transform=transforms.IdentityTransform()
+        ),
+    )
+    table_slice = TableSlice(
+        table="data_multi_partitioned_update_schema_change",
+        schema="pytest",
+        partition_dimensions=[],
+    )
+    deleted_partitions = handler.IcebergToDagsterPartitionMapper(
+        iceberg_table_schema=schema,
+        iceberg_partition_spec=spec,
+        table_slice=table_slice,
+    ).deleted()
+
+    assert len(deleted_partitions) == 2
+    assert sorted(deleted_partitions) == ["category", "timestamp"]

@@ -34,7 +34,11 @@ The following engines are currently implemented.
 - Fix concurrent write operations error
 - Add additional configuration options
   + Schema update error or update DONE
+  + Sort ordering
 - Updating partitions
   + [Existing partitions](https://py.iceberg.apache.org/api/#partition-evolution)
     + PartitionUpdateDiffer should also check if existing partitions are being updated (e.g. daily to hourly)
   + [Removing partitions](https://py.iceberg.apache.org/api/#remove-fields)
+- Examples:
+  + Add cmd for running examples
+  + Remove retry policy since we have fn to overwrite with retries

@@ -153,7 +153,7 @@ def test_iceberg_io_manager_with_daily_partitioned_assets(
 
     table = sql_catalog.load_table("dagster.daily_partitioned")
     assert len(table.spec().fields) == 1
-    assert table.spec().fields[0].name == "partition_day"
+    assert table.spec().fields[0].name == "partition"
 
     out_df = table.scan().to_arrow()
     assert out_df["partition"].to_pylist() == [
@@ -205,7 +205,7 @@ def test_iceberg_io_manager_with_hourly_partitioned_assets(
 
     table = sql_catalog.load_table("dagster.hourly_partitioned")
     assert len(table.spec().fields) == 1
-    assert table.spec().fields[0].name == "partition_hour"
+    assert table.spec().fields[0].name == "partition"
 
     out_df = table.scan().to_arrow()
     assert out_df["partition"].to_pylist() == [
@@ -240,7 +240,7 @@ def test_iceberg_io_manager_with_multipartitioned_assets(
 
     table = sql_catalog.load_table("dagster.multi_partitioned")
     assert len(table.spec().fields) == 2
-    assert [f.name for f in table.spec().fields] == ["category", "date_day"]
+    assert [f.name for f in table.spec().fields] == ["category", "date"]
 
     out_df = table.scan().to_arrow()
     assert out_df["date"].to_pylist() == [

@@ -135,7 +135,7 @@ class IcebergPyArrowTypeHandler(IcebergBaseArrowTypeHandler[ArrowTypes]):
         return (pa.Table, pa.RecordBatchReader)
 
 
-class PartitionUpdateDiffer:
+class IcebergToDagsterPartitionMapper:
 
     def __init__(
         self,
@@ -147,8 +147,9 @@ class PartitionUpdateDiffer:
         self.iceberg_partition_spec = iceberg_partition_spec
         self.table_slice = table_slice
 
-    @property
-    def table_slice_partition_dimensions(self) -> Sequence[TablePartitionDimension]:
+    def get_table_slice_partition_dimensions(
+        self, allow_empty_dagster_partitions: bool = False
+    ) -> Sequence[TablePartitionDimension]:
         # In practice, partition_dimensions is an empty list and not None
         partition_dimensions: Sequence[TablePartitionDimension] | None = None
         if not (
@@ -156,11 +157,32 @@ class PartitionUpdateDiffer:
             or len(self.table_slice.partition_dimensions) == 0
         ):
             partition_dimensions = self.table_slice.partition_dimensions
-        if partition_dimensions is None:
+        if partition_dimensions is None and not allow_empty_dagster_partitions:
             raise ValueError(
                 "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice."
             )
-        return partition_dimensions
+        return partition_dimensions if partition_dimensions is not None else []
+
+    def get_iceberg_partition_field_by_name(
+        self, name: str
+    ) -> Optional[partitioning.PartitionField]:
+        """Retrieve an iceberg partition field by its partition field spec name"""
+        partition_field: partitioning.PartitionField | None = None
+        for field in self.iceberg_partition_spec.fields:
+            if field.name == name:
+                partition_field = field
+                break
+        return partition_field
+
+    def get_dagster_partition_dimension_names(
+        self, allow_empty_dagster_partitions: bool = False
+    ) -> List[str]:
+        return [
+            p.partition_expr
+            for p in self.get_table_slice_partition_dimensions(
+                allow_empty_dagster_partitions=allow_empty_dagster_partitions
+            )
+        ]
 
     @property
     def iceberg_table_partition_field_names(self) -> Dict[int, str]:
@@ -170,21 +192,67 @@ class PartitionUpdateDiffer:
         )
 
     @property
-    def dagster_partition_dimension_names(self) -> List[str]:
-        return [p.partition_expr for p in self.table_slice_partition_dimensions]
-
-    @property
-    def get_new_partition_field_names(self) -> Set[str]:
-        return set(self.dagster_partition_dimension_names) - set(
+    def new_partition_field_names(self) -> Set[str]:
+        return set(self.get_dagster_partition_dimension_names()) - set(
             self.iceberg_table_partition_field_names.values()
         )
+
+    @property
+    def dagster_time_partitions(self) -> List[TablePartitionDimension]:
+        time_partitions = [
+            p
+            for p in self.get_table_slice_partition_dimensions()
+            if isinstance(p.partitions, TimeWindow)
+        ]
+        if len(time_partitions) > 1:
+            raise ValueError(
+                f"Multiple time partitions found: {time_partitions}. Only one time partition is allowed."
+            )
+        return time_partitions
+
+    @property
+    def updated_time_partition_field(self) -> str | None:
+        # The assumption is that even a multi-partitioned table will have only one time partition
+        time_partition = next(iter(self.dagster_time_partitions))
+        updated_field_name: str | None = None
+        if time_partition is not None:
+            time_partition_transformation = diff_to_transformation(
+                time_partition.partitions.start, time_partition.partitions.end
+            )
+            current_time_partition_field = self.get_iceberg_partition_field_by_name(
+                time_partition.partition_expr
+            )
+            if current_time_partition_field is None:
+                raise ValueError(
+                    f"Could not find partition field '{time_partition.partition_expr}' in the iceberg partition spec"
+                )
+            if time_partition_transformation != current_time_partition_field.transform:
+                updated_field_name = time_partition.partition_expr
+        return updated_field_name
 
     def diff(self) -> List[TablePartitionDimension]:
         return [
             p
-            for p in self.table_slice_partition_dimensions
-            if p.partition_expr in self.get_new_partition_field_names
+            for p in self.get_table_slice_partition_dimensions()
+            if p.partition_expr in self.new_partition_field_names
         ]
+
+    def updated(self) -> List[TablePartitionDimension]:
+        return [
+            p
+            for p in self.get_table_slice_partition_dimensions()
+            if p.partition_expr == self.updated_time_partition_field
+        ]
+
+    def deleted(self) -> List[TablePartitionDimension]:
+        return list(
+            set(self.iceberg_table_partition_field_names.values())
+            - set(
+                self.get_dagster_partition_dimension_names(
+                    allow_empty_dagster_partitions=True
+                )
+            )
+        )
 
 
 def _update_table_spec(
@@ -198,7 +266,12 @@ def _update_table_spec(
                 transform = diff_to_transformation(*partition.partitions)
             else:
                 transform = transforms.IdentityTransform()
-            update.add_field(partition.partition_expr, transform=transform)
+            update.add_field(
+                source_column_name=partition.partition_expr,
+                transform=transform,
+                # Name the partition field spec the same as the column name
+                partition_field_name=partition.partition_expr,
+            )
 
 
 def _get_row_filter(
@@ -247,7 +320,7 @@ def _table_writer(
         # Check if partitions match. If not, update
         #  But this should be a configuration option per table
         if partition_dimensions is not None:
-            new_partition_dimensions = PartitionUpdateDiffer(
+            new_partition_dimensions = IcebergToDagsterPartitionMapper(
                 table_slice=table_slice,
                 iceberg_table_schema=table.schema(),
                 iceberg_partition_spec=table.spec(),
