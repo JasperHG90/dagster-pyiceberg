@@ -561,4 +561,4 @@ def test_iceberg_to_dagster_partition_mapper_deleted():
     ).deleted()
 
     assert len(deleted_partitions) == 2
-    assert sorted(deleted_partitions) == ["category", "timestamp"]
+    assert sorted(p.name for p in deleted_partitions) == ["category", "timestamp"]

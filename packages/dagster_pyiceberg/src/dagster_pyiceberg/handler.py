@@ -198,6 +198,14 @@ class IcebergToDagsterPartitionMapper:
         )
 
     @property
+    def deleted_partition_field_names(self) -> Set[str]:
+        return set(self.iceberg_table_partition_field_names.values()) - set(
+            self.get_dagster_partition_dimension_names(
+                allow_empty_dagster_partitions=True
+            )
+        )
+
+    @property
     def dagster_time_partitions(self) -> List[TablePartitionDimension]:
         time_partitions = [
             p
@@ -244,15 +252,12 @@ class IcebergToDagsterPartitionMapper:
             if p.partition_expr == self.updated_time_partition_field
         ]
 
-    def deleted(self) -> List[str]:
-        return list(
-            set(self.iceberg_table_partition_field_names.values())
-            - set(
-                self.get_dagster_partition_dimension_names(
-                    allow_empty_dagster_partitions=True
-                )
-            )
-        )
+    def deleted(self) -> List[partitioning.PartitionField]:
+        return [
+            p
+            for p in self.iceberg_partition_spec.fields
+            if p.name in self.deleted_partition_field_names
+        ]
 
 
 def _update_table_spec(
