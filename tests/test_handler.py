@@ -408,7 +408,7 @@ def test_table_writer_multi_partitioned_update_schema_change_error(
 ):
     handler._table_writer(
         table_slice=TableSlice(
-            table="data_multi_partitioned_update_schema_change",
+            table="data_multi_partitioned_update_schema_change_error",
             schema="pytest",
             partition_dimensions=[
                 TablePartitionDimension(
@@ -429,7 +429,7 @@ def test_table_writer_multi_partitioned_update_schema_change_error(
     with pytest.raises(ValueError, match="Partition dimensions do not match"):
         handler._table_writer(
             table_slice=TableSlice(
-                table="data_multi_partitioned_update_schema_change",
+                table="data_multi_partitioned_update_schema_change_error",
                 schema="pytest",
                 partition_dimensions=[
                     TablePartitionDimension(
