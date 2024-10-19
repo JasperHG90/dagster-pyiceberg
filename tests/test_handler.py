@@ -403,6 +403,53 @@ def test_table_writer_multi_partitioned_update_schema_change(
     )
 
 
+def test_table_writer_multi_partitioned_update_schema_change_error(
+    warehouse_path: str, catalog: SqlCatalog, data: pa.Table
+):
+    handler._table_writer(
+        table_slice=TableSlice(
+            table="data_multi_partitioned_update_schema_change",
+            schema="pytest",
+            partition_dimensions=[
+                TablePartitionDimension(
+                    "timestamp",
+                    TimeWindow(dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1)),
+                ),
+            ],
+        ),
+        data=data,
+        catalog=catalog,
+        schema_update_mode="update",
+    )
+    data_ = data.filter(
+        (pc.field("category") == "A")
+        & (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
+        & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1))
+    )
+    with pytest.raises(ValueError, match="Partition dimensions do not match"):
+        handler._table_writer(
+            table_slice=TableSlice(
+                table="data_multi_partitioned_update_schema_change",
+                schema="pytest",
+                partition_dimensions=[
+                    TablePartitionDimension(
+                        "timestamp",
+                        TimeWindow(
+                            dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1)
+                        ),
+                    ),
+                    TablePartitionDimension(
+                        "category",
+                        ["A"],
+                    ),
+                ],
+            ),
+            data=data_,
+            catalog=catalog,
+            schema_update_mode="error",
+        )
+
+
 def test_partition_update_differ_no_changes():
     schema = iceberg_schema.Schema(
         T.NestedField(

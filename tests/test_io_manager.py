@@ -80,6 +80,20 @@ def daily_partitioned(context: AssetExecutionContext) -> pa.Table:
 
 
 @asset(
+    name="daily_partitioned",
+    key_prefix=["my_schema"],
+    partitions_def=HourlyPartitionsDefinition(start_date="2022-01-01-00:00"),
+    config_schema={"value": str},
+    metadata={"partition_expr": "partition"},
+)
+def daily_partitioned_schema_update(context: AssetExecutionContext) -> pa.Table:
+    partition = dt.datetime.strptime(context.partition_key, "%Y-%m-%d-%H:%M")
+    value = context.op_execution_context.op_config["value"]
+
+    return pa.Table.from_pydict({"partition": [partition], "value": [value], "b": [1]})
+
+
+@asset(
     key_prefix=["my_schema"],
     partitions_def=MultiPartitionsDefinition(
         partitions_defs={
@@ -148,6 +162,30 @@ def test_iceberg_io_manager_with_daily_partitioned_assets(
         dt.date(2022, 1, 2),
         dt.date(2022, 1, 1),
     ]
+
+
+# def test_iceberg_io_manager_fails_on_schema_update(tmp_path, sql_catalog, io_manager):
+#     resource_defs = {"io_manager": io_manager}
+
+#     for date in ["2022-01-01", "2022-01-02", "2022-01-03"]:
+#         res = materialize(
+#             [daily_partitioned],
+#             partition_key=date,
+#             resources=resource_defs,
+#             run_config={
+#                 "ops": {"my_schema__daily_partitioned": {"config": {"value": "1"}}}
+#             },
+#         )
+#         assert res.success
+
+#     res = materialize(
+#         [daily_partitioned_schema_update],
+#         partition_key="2022-01-01-00:00",
+#         resources=resource_defs,
+#         run_config={
+#             "ops": {"my_schema__daily_partitioned": {"config": {"value": "1"}}}
+#         },
+#     )
 
 
 def test_iceberg_io_manager_with_hourly_partitioned_assets(
