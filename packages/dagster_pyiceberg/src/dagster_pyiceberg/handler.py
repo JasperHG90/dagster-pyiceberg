@@ -540,6 +540,9 @@ def _overwrite_table_with_retries(
 ):
     """Overwrites an iceberg table and retries on failure
 
+    NB: This will be added in PyIceberg 0.8.0 or 0.9.0. This implementation is based
+        on TODO TODO TODO
+
     Args:
         table (table.Table): Iceberg table
         df (pa.Table): Data to write to the table
