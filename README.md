@@ -68,7 +68,7 @@ The table below shows which PyIceberg features are currently available.
 | Table properties | ❌ | https://py.iceberg.apache.org/api/#table-properties | Can add this through metadata on the asset. |
 | Snapshot properties | ❌ | https://py.iceberg.apache.org/api/#snapshot-properties | Useful for correlating Dagster runs to snapshots by adding tags to snapshot. |
 
-### Implemented catalog backends
+### Supported catalog backends
 
 The following catalog backends are currently supported.
 
