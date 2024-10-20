@@ -373,25 +373,31 @@ class IcebergTableSpecUpdater:
             raise ValueError(
                 "Schema update mode is set to 'error' but there are schema changes to the Iceberg table"
             )
-        with table.update_spec() as update:
-            for type_, partitions in self._changes().items():
-                if not partitions:  # Empty list
-                    continue
-                else:
-                    for partition in partitions:
-                        match type_:
-                            case "new":
-                                self._spec_new(update=update, partition=partition)
-                            case "updated":
-                                self._spec_update(update=update, partition=partition)
-                            case "deleted":
-                                self._spec_delete(
-                                    update=update, partition_name=partition.name
-                                )
-                            case _:
-                                raise ValueError(
-                                    f"Unsupported spec update type: {type_}"
-                                )
+        # If there are no changes, do nothing
+        elif self.number_of_table_spec_changes == 0:
+            return
+        else:
+            with table.update_spec() as update:
+                for type_, partitions in self._changes().items():
+                    if not partitions:  # Empty list
+                        continue
+                    else:
+                        for partition in partitions:
+                            match type_:
+                                case "new":
+                                    self._spec_new(update=update, partition=partition)
+                                case "updated":
+                                    self._spec_update(
+                                        update=update, partition=partition
+                                    )
+                                case "deleted":
+                                    self._spec_delete(
+                                        update=update, partition_name=partition.name
+                                    )
+                                case _:
+                                    raise ValueError(
+                                        f"Unsupported spec update type: {type_}"
+                                    )
 
 
 def _update_table_spec(
@@ -478,22 +484,14 @@ def _table_writer(
         # Check if partitions match. If not, update
         #  But this should be a configuration option per table
         if partition_dimensions is not None:
-            new_partition_dimensions = IcebergToDagsterPartitionMapper(
-                table_slice=table_slice,
-                iceberg_table_schema=table.schema(),
-                iceberg_partition_spec=table.spec(),
-            ).new()
-            if (
-                partition_spec_update_mode == "error"
-                and len(new_partition_dimensions) > 0
-            ):
-                raise ValueError(
-                    f"Partition dimensions do not match. New partitions: {new_partition_dimensions}"
-                )
-            _update_table_spec(
-                table=table,
-                partition_dimensions=new_partition_dimensions,  # May be empty
-            )
+            IcebergTableSpecUpdater(
+                partition_mapping=IcebergToDagsterPartitionMapper(
+                    table_slice=table_slice,
+                    iceberg_table_schema=table.schema(),
+                    iceberg_partition_spec=table.spec(),
+                ),
+                partition_spec_update_mode=partition_spec_update_mode,
+            ).update_table_spec(table=table)
     else:
         table = catalog.create_table(
             table_path,
@@ -505,7 +503,16 @@ def _table_writer(
         #  to pass these as metadata to the asset
         # TODO: add updates and deletes
         if partition_dimensions is not None:
-            _update_table_spec(table=table, partition_dimensions=partition_dimensions)
+            IcebergTableSpecUpdater(
+                partition_mapping=IcebergToDagsterPartitionMapper(
+                    table_slice=table_slice,
+                    iceberg_table_schema=table.schema(),
+                    iceberg_partition_spec=table.spec(),
+                ),
+                # When creating new tables with dagster partitions, we always update
+                # the partition spec
+                partition_spec_update_mode="update",
+            ).update_table_spec(table=table)
 
     row_filter: E.BooleanExpression
     if partition_dimensions is not None:

@@ -442,7 +442,9 @@ def test_table_writer_multi_partitioned_update_schema_change_error(
         & (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
         & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1))
     )
-    with pytest.raises(ValueError, match="Partition dimensions do not match"):
+    with pytest.raises(
+        ValueError, match="Schema update mode is set to 'error' but there"
+    ):
         handler._table_writer(
             table_slice=TableSlice(
                 table="data_multi_partitioned_update_schema_change_error",
