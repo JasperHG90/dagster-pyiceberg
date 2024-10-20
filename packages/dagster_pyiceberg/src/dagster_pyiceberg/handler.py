@@ -274,15 +274,16 @@ class IcebergToDagsterPartitionMapper:
             time_partition_transformation = diff_to_transformation(
                 time_partition.partitions.start, time_partition.partitions.end
             )
+            # Check if field is present in iceberg partition spec
             current_time_partition_field = self.get_iceberg_partition_field_by_name(
                 time_partition.partition_expr
             )
-            if current_time_partition_field is None:
-                raise ValueError(
-                    f"Could not find partition field '{time_partition.partition_expr}' in the iceberg partition spec"
-                )
-            if time_partition_transformation != current_time_partition_field.transform:
-                updated_field_name = time_partition.partition_expr
+            if current_time_partition_field is not None:
+                if (
+                    time_partition_transformation
+                    != current_time_partition_field.transform
+                ):
+                    updated_field_name = time_partition.partition_expr
         return updated_field_name
 
     def new(self) -> List[TablePartitionDimension]:

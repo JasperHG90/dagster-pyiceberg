@@ -1,5 +1,6 @@
 import datetime as dt
 import pathlib as plb
+from unittest import mock
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -100,6 +101,22 @@ def add_data_to_table(
     data: pa.Table,
 ):
     catalog.load_table(f"{namespace}.data_partitioned_update").append(data)
+
+
+@pytest.fixture(scope="function")
+def iceberg_table_schema() -> iceberg_schema.Schema:
+    return iceberg_schema.Schema(
+        T.NestedField(
+            1,
+            "timestamp",
+            T.TimestampType(),
+        ),
+        T.NestedField(
+            2,
+            "category",
+            T.StringType(),
+        ),
+    )
 
 
 def test_time_window_partition_filter(
@@ -449,19 +466,9 @@ def test_table_writer_multi_partitioned_update_schema_change_error(
         )
 
 
-def test_iceberg_to_dagster_partition_mapper_new_fields():
-    schema = iceberg_schema.Schema(
-        T.NestedField(
-            1,
-            "timestamp",
-            T.TimestampType(),
-        ),
-        T.NestedField(
-            2,
-            "category",
-            T.StringType(),
-        ),
-    )
+def test_iceberg_to_dagster_partition_mapper_new_fields(
+    iceberg_table_schema: iceberg_schema.Schema,
+):
     spec = iceberg_partitioning.PartitionSpec(
         iceberg_partitioning.PartitionField(
             1, 1, name="timestamp", transform=transforms.HourTransform()
@@ -482,7 +489,7 @@ def test_iceberg_to_dagster_partition_mapper_new_fields():
         ],
     )
     new_partitions = handler.IcebergToDagsterPartitionMapper(
-        iceberg_table_schema=schema,
+        iceberg_table_schema=iceberg_table_schema,
         iceberg_partition_spec=spec,
         table_slice=table_slice,
     ).new()
@@ -490,19 +497,9 @@ def test_iceberg_to_dagster_partition_mapper_new_fields():
     assert new_partitions[0].partition_expr == "category"
 
 
-def test_iceberg_to_dagster_partition_mapper_changed_time_partition():
-    schema = iceberg_schema.Schema(
-        T.NestedField(
-            1,
-            "timestamp",
-            T.TimestampType(),
-        ),
-        T.NestedField(
-            2,
-            "category",
-            T.StringType(),
-        ),
-    )
+def test_iceberg_to_dagster_partition_mapper_changed_time_partition(
+    iceberg_table_schema: iceberg_schema.Schema,
+):
     spec = iceberg_partitioning.PartitionSpec(
         iceberg_partitioning.PartitionField(
             1, 1, name="timestamp", transform=transforms.HourTransform()
@@ -520,7 +517,7 @@ def test_iceberg_to_dagster_partition_mapper_changed_time_partition():
         ],
     )
     updated_partitions = handler.IcebergToDagsterPartitionMapper(
-        iceberg_table_schema=schema,
+        iceberg_table_schema=iceberg_table_schema,
         iceberg_partition_spec=spec,
         table_slice=table_slice,
     ).updated()
@@ -528,19 +525,9 @@ def test_iceberg_to_dagster_partition_mapper_changed_time_partition():
     assert updated_partitions[0].partition_expr == "timestamp"
 
 
-def test_iceberg_to_dagster_partition_mapper_deleted():
-    schema = iceberg_schema.Schema(
-        T.NestedField(
-            1,
-            "timestamp",
-            T.TimestampType(),
-        ),
-        T.NestedField(
-            2,
-            "category",
-            T.StringType(),
-        ),
-    )
+def test_iceberg_to_dagster_partition_mapper_deleted(
+    iceberg_table_schema: iceberg_schema.Schema,
+):
     spec = iceberg_partitioning.PartitionSpec(
         iceberg_partitioning.PartitionField(
             1, 1, name="timestamp", transform=transforms.HourTransform()
@@ -555,10 +542,121 @@ def test_iceberg_to_dagster_partition_mapper_deleted():
         partition_dimensions=[],
     )
     deleted_partitions = handler.IcebergToDagsterPartitionMapper(
-        iceberg_table_schema=schema,
+        iceberg_table_schema=iceberg_table_schema,
         iceberg_partition_spec=spec,
         table_slice=table_slice,
     ).deleted()
 
     assert len(deleted_partitions) == 2
     assert sorted(p.name for p in deleted_partitions) == ["category", "timestamp"]
+
+
+def test_iceberg_table_spec_updater_delete_field(
+    iceberg_table_schema: iceberg_schema.Schema,
+):
+    spec = iceberg_partitioning.PartitionSpec(
+        iceberg_partitioning.PartitionField(
+            1, 1, name="timestamp", transform=transforms.HourTransform()
+        ),
+        iceberg_partitioning.PartitionField(
+            2, 2, name="category", transform=transforms.IdentityTransform()
+        ),
+    )
+    table_slice = TableSlice(
+        table="data_multi_partitioned_update_schema_change",
+        schema="pytest",
+        partition_dimensions=[
+            # Changed from hourly to daily
+            TablePartitionDimension(
+                "timestamp",
+                TimeWindow(dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1)),
+            ),
+        ],
+    )
+    spec_updater = handler.IcebergTableSpecUpdater(
+        partition_mapping=handler.IcebergToDagsterPartitionMapper(
+            iceberg_table_schema=iceberg_table_schema,
+            iceberg_partition_spec=spec,
+            table_slice=table_slice,
+        ),
+        partition_spec_update_mode="update",
+    )
+    mock_iceberg_table = mock.MagicMock()
+    spec_updater.update_table_spec(table=mock_iceberg_table)
+    mock_iceberg_table.update_spec.assert_called_once()
+    mock_iceberg_table.update_spec.return_value.__enter__.return_value.remove_field.assert_called_once_with(
+        partition_name="category"
+    )
+
+
+def test_iceberg_table_spec_updater_update_field(
+    iceberg_table_schema: iceberg_schema.Schema,
+):
+    spec = iceberg_partitioning.PartitionSpec(
+        iceberg_partitioning.PartitionField(
+            1, 1, name="timestamp", transform=transforms.HourTransform()
+        ),
+    )
+    table_slice = TableSlice(
+        table="data_multi_partitioned_update_schema_change",
+        schema="pytest",
+        partition_dimensions=[
+            # Changed from hourly to daily
+            TablePartitionDimension(
+                "timestamp",
+                TimeWindow(dt.datetime(2023, 1, 1), dt.datetime(2023, 1, 2)),
+            ),
+        ],
+    )
+    spec_updater = handler.IcebergTableSpecUpdater(
+        partition_mapping=handler.IcebergToDagsterPartitionMapper(
+            iceberg_table_schema=iceberg_table_schema,
+            iceberg_partition_spec=spec,
+            table_slice=table_slice,
+        ),
+        partition_spec_update_mode="update",
+    )
+    mock_iceberg_table = mock.MagicMock()
+    spec_updater.update_table_spec(table=mock_iceberg_table)
+    mock_iceberg_table.update_spec.assert_called_once()
+    mock_iceberg_table.update_spec.return_value.__enter__.return_value.remove_field.assert_called_once_with(
+        partition_name="timestamp"
+    )
+    mock_iceberg_table.update_spec.return_value.__enter__.return_value.add_field.assert_called_once_with(
+        source_column_name="timestamp",
+        transform=transforms.DayTransform(),
+        partition_field_name="timestamp",
+    )
+
+
+def test_iceberg_table_spec_updater_add_field(
+    iceberg_table_schema: iceberg_schema.Schema,
+):
+    spec = iceberg_partitioning.PartitionSpec()
+    table_slice = TableSlice(
+        table="data_multi_partitioned_update_schema_change",
+        schema="pytest",
+        partition_dimensions=[
+            # Changed from hourly to daily
+            TablePartitionDimension(
+                "timestamp",
+                TimeWindow(dt.datetime(2023, 1, 1), dt.datetime(2023, 1, 2)),
+            ),
+        ],
+    )
+    spec_updater = handler.IcebergTableSpecUpdater(
+        partition_mapping=handler.IcebergToDagsterPartitionMapper(
+            iceberg_table_schema=iceberg_table_schema,
+            iceberg_partition_spec=spec,
+            table_slice=table_slice,
+        ),
+        partition_spec_update_mode="update",
+    )
+    mock_iceberg_table = mock.MagicMock()
+    spec_updater.update_table_spec(table=mock_iceberg_table)
+    mock_iceberg_table.update_spec.assert_called_once()
+    mock_iceberg_table.update_spec.return_value.__enter__.return_value.add_field.assert_called_once_with(
+        source_column_name="timestamp",
+        transform=transforms.DayTransform(),
+        partition_field_name="timestamp",
+    )
