@@ -39,9 +39,8 @@ The following engines are currently implemented.
 
 ## To do
 
-- Fix concurrent write operations error
 - Add additional configuration options
-  + Schema update error or update DONE
+  + Partition update error or update DONE
   + Sort ordering
 - Updating partitions
   + [Existing partitions](https://py.iceberg.apache.org/api/#partition-evolution)
