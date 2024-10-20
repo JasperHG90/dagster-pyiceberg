@@ -386,14 +386,23 @@ class IcebergTableSpecUpdater:
                         for partition in partitions:
                             match type_:
                                 case "new":
-                                    self._spec_new(update=update, partition=partition)
+                                    partition_ = cast(
+                                        TablePartitionDimension, partition
+                                    )
+                                    self._spec_new(update=update, partition=partition_)
                                 case "updated":
+                                    partition_ = cast(
+                                        TablePartitionDimension, partition
+                                    )
                                     self._spec_update(
-                                        update=update, partition=partition
+                                        update=update, partition=partition_
                                     )
                                 case "deleted":
+                                    partition_ = cast(
+                                        partitioning.PartitionField, partition
+                                    )
                                     self._spec_delete(
-                                        update=update, partition_name=partition.name
+                                        update=update, partition_name=partition_.name
                                     )
                                 case _:
                                     raise ValueError(
@@ -555,7 +564,8 @@ def _overwrite_table_with_retries(
                     if retry.retry_state.attempt_number < retries:
                         table.refresh()
     except RetryError as e:
-        raise RetryError(f"Commit failed after {retries} retries") from e
+        # Ignore PyRight error since it's a problem in tenacity
+        raise RetryError(f"Commit failed after {retries} retries") from e  # type: ignore
 
 
 def _time_window_partition_filter(
