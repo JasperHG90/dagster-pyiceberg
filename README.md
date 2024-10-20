@@ -70,7 +70,7 @@ The table below shows which PyIceberg features are currently available.
 
 ### Implemented catalog backends
 
-The following catalog backends are currently implemented.
+The following catalog backends are currently supported.
 
 - sql
 - rest
