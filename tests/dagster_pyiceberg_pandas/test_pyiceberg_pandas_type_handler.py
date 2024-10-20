@@ -29,7 +29,7 @@ def io_manager(tmp_path: Path) -> IcebergPandasIOManager:
             }
         ),
         schema="dagster",
-        schema_update_mode="error",
+        partition_spec_update_mode="error",
     )
 
 

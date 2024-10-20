@@ -114,7 +114,7 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
         alias="schema",
         description="Name of the iceberg catalog schema to use.",
     )  # schema is a reserved word for pydantic
-    schema_update_mode: PartitionSpecUpdateMode = Field(
+    partition_spec_update_mode: PartitionSpecUpdateMode = Field(
         default=PartitionSpecUpdateMode.error,
         description="Logic to use when updating an iceberg table partition spec with non-matching dagster partitions.",
     )

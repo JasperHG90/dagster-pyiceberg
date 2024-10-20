@@ -245,7 +245,7 @@ def test_table_writer(catalog: SqlCatalog, data: pa.Table):
         ),
         data=data,
         catalog=catalog,
-        schema_update_mode="update",
+        partition_spec_update_mode="update",
     )
     assert catalog.table_exists("pytest.data_table_writer")
 
@@ -270,7 +270,7 @@ def test_table_writer_partitioned(catalog: SqlCatalog, data: pa.Table):
         ),
         data=data,
         catalog=catalog,
-        schema_update_mode="update",
+        partition_spec_update_mode="update",
     )
     table = catalog.load_table("pytest.data_table_writer_partitioned")
     partition_field_names = [f.name for f in table.spec().fields]
@@ -303,7 +303,7 @@ def test_table_writer_multi_partitioned(catalog: SqlCatalog, data: pa.Table):
         ),
         data=data,
         catalog=catalog,
-        schema_update_mode="update",
+        partition_spec_update_mode="update",
     )
     table = catalog.load_table("pytest.data_table_writer_multi_partitioned")
     partition_field_names = [f.name for f in table.spec().fields]
@@ -338,7 +338,7 @@ def test_table_writer_multi_partitioned_update(catalog: SqlCatalog, data: pa.Tab
         ),
         data=data,
         catalog=catalog,
-        schema_update_mode="update",
+        partition_spec_update_mode="update",
     )
     table = catalog.load_table("pytest.data_multi_partitioned_update")
     data_out = (
@@ -373,7 +373,7 @@ def test_table_writer_multi_partitioned_update_schema_change(
         ),
         data=data,
         catalog=catalog,
-        schema_update_mode="update",
+        partition_spec_update_mode="update",
     )
     data_ = data.filter(
         (pc.field("category") == "A")
@@ -397,7 +397,7 @@ def test_table_writer_multi_partitioned_update_schema_change(
         ),
         data=data_,
         catalog=catalog,
-        schema_update_mode="update",
+        partition_spec_update_mode="update",
     )
     path_to_dwh = (
         plb.Path(warehouse_path)
@@ -435,7 +435,7 @@ def test_table_writer_multi_partitioned_update_schema_change_error(
         ),
         data=data,
         catalog=catalog,
-        schema_update_mode="update",
+        partition_spec_update_mode="update",
     )
     data_ = data.filter(
         (pc.field("category") == "A")
@@ -462,7 +462,7 @@ def test_table_writer_multi_partitioned_update_schema_change_error(
             ),
             data=data_,
             catalog=catalog,
-            schema_update_mode="error",
+            partition_spec_update_mode="error",
         )
 
 
@@ -563,10 +563,9 @@ def test_iceberg_table_spec_updater_delete_field(
         ),
     )
     table_slice = TableSlice(
-        table="data_multi_partitioned_update_schema_change",
+        table="spec_updater_delete",
         schema="pytest",
         partition_dimensions=[
-            # Changed from hourly to daily
             TablePartitionDimension(
                 "timestamp",
                 TimeWindow(dt.datetime(2023, 1, 1, 0), dt.datetime(2023, 1, 1, 1)),
@@ -598,10 +597,9 @@ def test_iceberg_table_spec_updater_update_field(
         ),
     )
     table_slice = TableSlice(
-        table="data_multi_partitioned_update_schema_change",
+        table="spec_updater_update",
         schema="pytest",
         partition_dimensions=[
-            # Changed from hourly to daily
             TablePartitionDimension(
                 "timestamp",
                 TimeWindow(dt.datetime(2023, 1, 1), dt.datetime(2023, 1, 2)),
@@ -634,10 +632,9 @@ def test_iceberg_table_spec_updater_add_field(
 ):
     spec = iceberg_partitioning.PartitionSpec()
     table_slice = TableSlice(
-        table="data_multi_partitioned_update_schema_change",
+        table="spec_updater_add",
         schema="pytest",
         partition_dimensions=[
-            # Changed from hourly to daily
             TablePartitionDimension(
                 "timestamp",
                 TimeWindow(dt.datetime(2023, 1, 1), dt.datetime(2023, 1, 2)),
@@ -660,3 +657,30 @@ def test_iceberg_table_spec_updater_add_field(
         transform=transforms.DayTransform(),
         partition_field_name="timestamp",
     )
+
+
+def test_iceberg_table_spec_updater_fails_with_error_update_mode(
+    iceberg_table_schema: iceberg_schema.Schema,
+):
+    spec = iceberg_partitioning.PartitionSpec()
+    table_slice = TableSlice(
+        table="spec_updater_fails",
+        schema="pytest",
+        partition_dimensions=[
+            TablePartitionDimension(
+                "timestamp",
+                TimeWindow(dt.datetime(2023, 1, 1), dt.datetime(2023, 1, 2)),
+            ),
+        ],
+    )
+    spec_updater = handler.IcebergTableSpecUpdater(
+        partition_mapping=handler.IcebergToDagsterPartitionMapper(
+            iceberg_table_schema=iceberg_table_schema,
+            iceberg_partition_spec=spec,
+            table_slice=table_slice,
+        ),
+        partition_spec_update_mode="error",
+    )
+    mock_iceberg_table = mock.MagicMock()
+    with pytest.raises(ValueError, match="Schema update mode is set to"):
+        spec_updater.update_table_spec(table=mock_iceberg_table)
