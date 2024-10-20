@@ -359,17 +359,18 @@ class IcebergTableSpecUpdater:
             # Already added by another operation
             pass
 
+    @property
+    def number_of_table_spec_changes(self) -> int:
+        """Return the number of changes to the Iceberg table spec."""
+        return len([*itertools.chain.from_iterable(self._changes().values())])
+
     def update_table_spec(self, table: table.Table):
-        changes = self._changes()
-        if (
-            self.schema_update_mode == "error"
-            and len([*itertools.chain.from_iterable(changes.values())]) > 0
-        ):
+        if self.schema_update_mode == "error" and self.number_of_table_spec_changes > 0:
             raise ValueError(
                 "Schema update mode is set to 'error' but there are schema changes to the Iceberg table"
             )
         with table.update_spec() as update:
-            for type_, partitions in changes.items():
+            for type_, partitions in self._changes().items():
                 if not partitions:  # Empty list
                     continue
                 else:
