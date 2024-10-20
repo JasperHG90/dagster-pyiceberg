@@ -42,3 +42,7 @@ The following engines are currently implemented.
 - Examples:
   + Add cmd for running examples
   + Remove retry policy since we have fn to overwrite with retries
+
+Make overview with what is and is not supported right now.
+
+Schema evolution? -> https://py.iceberg.apache.org/api/#union-by-name -> Manual action

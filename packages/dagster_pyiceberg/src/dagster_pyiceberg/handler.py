@@ -1,4 +1,5 @@
 import datetime as dt
+import itertools
 from abc import abstractmethod
 from typing import (
     Dict,
@@ -35,6 +36,7 @@ from pyiceberg.catalog.sql import SqlCatalog
 from pyiceberg.exceptions import CommitFailedException
 from pyiceberg.partitioning import PartitionSpec
 from pyiceberg.schema import Schema
+from pyiceberg.table.update.spec import UpdateSpec
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_random
 
 U = TypeVar("U")
@@ -155,6 +157,7 @@ class IcebergToDagsterPartitionMapper:
 
     def __init__(
         self,
+        # TODO: add iceberg table and retrieve table schema and partition spec from there as properties
         iceberg_table_schema: Schema,
         iceberg_partition_spec: PartitionSpec,
         table_slice: TableSlice,
@@ -176,6 +179,8 @@ class IcebergToDagsterPartitionMapper:
     ) -> Sequence[TablePartitionDimension]:
         """Retrieve dagster table slice partition dimensions."""
         # In practice, partition_dimensions is an empty list and not None
+        #  But the type hint is Optional[Sequence[TablePartitionDimension]]
+        #  So we need to check for None here to pass the type checker
         partition_dimensions: Sequence[TablePartitionDimension] | None = None
         if not (
             self.table_slice.partition_dimensions is None
@@ -314,6 +319,74 @@ class IcebergTableSpecUpdater:
     ):
         self.schema_update_mode = schema_update_mode
         self.partition_mapping = partition_mapping
+
+    def _changes(
+        self,
+    ) -> Dict[str, List[TablePartitionDimension] | List[partitioning.PartitionField]]:
+        return {
+            "new": self.partition_mapping.new(),
+            "updated": self.partition_mapping.updated(),
+            "deleted": self.partition_mapping.deleted(),
+        }
+
+    def _spec_update(self, update: UpdateSpec, partition: TablePartitionDimension):
+        self._spec_delete(update=update, partition_name=partition.partition_expr)
+        self._spec_new(update=update, partition=partition)
+
+    def _spec_delete(self, update: UpdateSpec, partition_name: str):
+        try:
+            update.remove_field(partition_name=partition_name)
+        except ValueError:
+            # Already deleted by another operation
+            pass
+
+    def _spec_new(self, update: UpdateSpec, partition: TablePartitionDimension):
+        if isinstance(partition.partitions, TimeWindow):
+            transform = diff_to_transformation(*partition.partitions)
+        else:
+            transform = transforms.IdentityTransform()
+        try:
+            update.add_field(
+                source_column_name=partition.partition_expr,
+                transform=transform,
+                # Name the partition field spec the same as the column name.
+                #  We rely on this throughout this codebase because it makes
+                #  it a lot easier to make the mapping between dagster partitions
+                #  and Iceberg partition fields.
+                partition_field_name=partition.partition_expr,
+            )
+        except ValueError:
+            # Already added by another operation
+            pass
+
+    def update_table_spec(self, table: table.Table):
+        changes = self._changes()
+        if (
+            self.schema_update_mode == "error"
+            and len([*itertools.chain.from_iterable(changes.values())]) > 0
+        ):
+            raise ValueError(
+                "Schema update mode is set to 'error' but there are schema changes to the Iceberg table"
+            )
+        with table.update_spec() as update:
+            for type_, partitions in changes.items():
+                if not partitions:  # Empty list
+                    continue
+                else:
+                    for partition in partitions:
+                        match type_:
+                            case "new":
+                                self._spec_new(update=update, partition=partition)
+                            case "updated":
+                                self._spec_update(update=update, partition=partition)
+                            case "deleted":
+                                self._spec_delete(
+                                    update=update, partition_name=partition.name
+                                )
+                            case _:
+                                raise ValueError(
+                                    f"Unsupported spec update type: {type_}"
+                                )
 
 
 def _update_table_spec(
