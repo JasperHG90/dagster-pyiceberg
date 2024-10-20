@@ -238,7 +238,7 @@ class IcebergToDagsterPartitionMapper:
                 updated_field_name = time_partition.partition_expr
         return updated_field_name
 
-    def diff(self) -> List[TablePartitionDimension]:
+    def new(self) -> List[TablePartitionDimension]:
         return [
             p
             for p in self.get_table_slice_partition_dimensions()
@@ -329,7 +329,7 @@ def _table_writer(
                 table_slice=table_slice,
                 iceberg_table_schema=table.schema(),
                 iceberg_partition_spec=table.spec(),
-            ).diff()
+            ).new()
             if schema_update_mode == "error" and len(new_partition_dimensions) > 0:
                 raise ValueError(
                     f"Partition dimensions do not match. New partitions: {new_partition_dimensions}"

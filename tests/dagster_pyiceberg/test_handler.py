@@ -485,7 +485,7 @@ def test_iceberg_to_dagster_partition_mapper_new_fields():
         iceberg_table_schema=schema,
         iceberg_partition_spec=spec,
         table_slice=table_slice,
-    ).diff()
+    ).new()
     assert len(new_partitions) == 1
     assert new_partitions[0].partition_expr == "category"
 
