@@ -6,7 +6,53 @@ This implementation is based on the [dagster-deltalake](https://github.com/dagst
 
 ## Usage
 
-See 'examples' directory.
+This library allows you to read from and write to Iceberg tables using PyIceberg.
+
+You need to configure an Iceberg Catalog backend for this. See the [PyIceberg documentation](https://py.iceberg.apache.org/configuration/#catalogs) for more information.
+
+Then, you can define the IO manager resource as follows:
+
+```python
+from dagster_pyiceberg import IcebergPyarrowIOManager, IcebergSqlCatalogConfig
+
+CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/dag/warehouse/catalog.db"
+CATALOG_WAREHOUSE = "file:///home/vscode/workspace/.tmp/dag/warehouse"
+
+resources = {
+    "io_manager": IcebergPyarrowIOManager(
+        name="test",
+        config=IcebergSqlCatalogConfig(
+            properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
+        ),
+        schema="dagster",
+    )
+}
+```
+
+You can also use the IO manager with partitioned assets:
+
+```python
+from dagster import DailyPartitionsDefinition, Definitions, asset
+
+partition = DailyPartitionsDefinition(
+    start_date=dt.datetime(2024, 10, 1, 0, tzinfo=dt.timezone.utc),
+    end_date=dt.datetime(2024, 10, 30, 0, tzinfo=dt.timezone.utc),
+)
+
+
+@asset(
+    partitions_def=partition,
+    metadata={"partition_expr": "date"},
+)
+def asset_1():
+    data = {
+        "date": [dt.datetime(2024, 10, i + 1, 0) for i in range(20)],
+        "values": np.random.normal(0, 1, 20).tolist(),
+    }
+    return pa.Table.from_pydict(data)
+```
+
+For full examples, see 'examples' directory.
 
 ## Limitations
 
@@ -35,6 +81,12 @@ The following engines are currently implemented.
 
 - arrow
 - pandas
+
+## Development
+
+1. Clone repo
+2. Set up the devcontainer
+3. Run `just s` to install dependencies
 
 ## To do
 
