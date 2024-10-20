@@ -47,6 +47,7 @@ CatalogTypes = Union[SqlCatalog, RestCatalog]
 
 
 def date_diff(start: dt.datetime, end: dt.datetime) -> pendulum.Interval:
+    """Compute an interval between two dates"""
     start_ = pendulum.instance(start)
     end_ = pendulum.instance(end)
     return end_ - start_
@@ -55,6 +56,7 @@ def date_diff(start: dt.datetime, end: dt.datetime) -> pendulum.Interval:
 def diff_to_transformation(
     start: dt.datetime, end: dt.datetime
 ) -> transforms.Transform:
+    """Based on the interval between two dates, return a transformation"""
     delta = date_diff(start, end)
     match delta.in_hours():
         case 1:
@@ -73,6 +75,18 @@ def diff_to_transformation(
 
 
 class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
+    """
+    Base class for PyIceberg type handlers
+
+    To implement a new type handler (e.g. pandas), subclass this class and implement
+    the `from_arrow` and `to_arrow` methods. These methods convert between the target
+    type (e.g. pandas DataFrame) and pyarrow Table. You must also declare a property
+    `supported_types` that lists the types that the handler supports.
+    See `IcebergPyArrowTypeHandler` for an example.
+
+    Target types are determined in the user code by type annotating the output of
+    a dagster asset.
+    """
 
     @abstractmethod
     def from_arrow(self, obj: table.DataScan, target_type: type) -> U: ...
@@ -119,6 +133,8 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
 
 
 class IcebergPyArrowTypeHandler(IcebergBaseArrowTypeHandler[ArrowTypes]):
+    """Type handler that converts data between Iceberg tables and pyarrow Tables"""
+
     def from_arrow(
         self, obj: table.DataScan, target_type: Type[ArrowTypes]
     ) -> ArrowTypes:
@@ -143,6 +159,14 @@ class IcebergToDagsterPartitionMapper:
         iceberg_partition_spec: PartitionSpec,
         table_slice: TableSlice,
     ):
+        """Maps iceberg partition fields to dagster partition dimensions.
+
+        Args:
+            iceberg_table_schema (Schema): PyIceberg table schema
+            iceberg_partition_spec (PartitionSpec): PyIceberg table partition spec
+            table_slice (TableSlice): dagster database IO manager table slice. This
+                contains information about dagster partitions.
+        """
         self.iceberg_table_schema = iceberg_table_schema
         self.iceberg_partition_spec = iceberg_partition_spec
         self.table_slice = table_slice
@@ -150,6 +174,7 @@ class IcebergToDagsterPartitionMapper:
     def get_table_slice_partition_dimensions(
         self, allow_empty_dagster_partitions: bool = False
     ) -> Sequence[TablePartitionDimension]:
+        """Retrieve dagster table slice partition dimensions."""
         # In practice, partition_dimensions is an empty list and not None
         partition_dimensions: Sequence[TablePartitionDimension] | None = None
         if not (
@@ -166,7 +191,7 @@ class IcebergToDagsterPartitionMapper:
     def get_iceberg_partition_field_by_name(
         self, name: str
     ) -> Optional[partitioning.PartitionField]:
-        """Retrieve an iceberg partition field by its partition field spec name"""
+        """Retrieve an iceberg partition field by its partition field spec name."""
         partition_field: partitioning.PartitionField | None = None
         for field in self.iceberg_partition_spec.fields:
             if field.name == name:
@@ -177,6 +202,16 @@ class IcebergToDagsterPartitionMapper:
     def get_dagster_partition_dimension_names(
         self, allow_empty_dagster_partitions: bool = False
     ) -> List[str]:
+        """Retrieve dagster partition dimension names.
+
+        These are set in asset metadata using 'partition_expr', e.g.
+
+        @asset(
+            partitions_def=some_partition_definition,
+            metadata={"partition_expr": "<COLUMN_NAME>"},
+        )
+        ...
+        """
         return [
             p.partition_expr
             for p in self.get_table_slice_partition_dimensions(
@@ -186,6 +221,7 @@ class IcebergToDagsterPartitionMapper:
 
     @property
     def iceberg_table_partition_field_names(self) -> Dict[int, str]:
+        """TODO: rename property as this is a mapping"""
         return map_partition_spec_to_fields(
             partition_spec=self.iceberg_partition_spec,
             table_schema=self.iceberg_table_schema,
@@ -193,12 +229,15 @@ class IcebergToDagsterPartitionMapper:
 
     @property
     def new_partition_field_names(self) -> Set[str]:
+        """Retrieve new partition field names passed to a dagster asset that are
+        not present in the iceberg table partition spec."""
         return set(self.get_dagster_partition_dimension_names()) - set(
             self.iceberg_table_partition_field_names.values()
         )
 
     @property
     def deleted_partition_field_names(self) -> Set[str]:
+        """Retrieve partition field names that have been removed from a dagster asset."""
         return set(self.iceberg_table_partition_field_names.values()) - set(
             self.get_dagster_partition_dimension_names(
                 allow_empty_dagster_partitions=True
@@ -207,6 +246,7 @@ class IcebergToDagsterPartitionMapper:
 
     @property
     def dagster_time_partitions(self) -> List[TablePartitionDimension]:
+        """Retrieve dagster time partitions if present."""
         time_partitions = [
             p
             for p in self.get_table_slice_partition_dimensions()
@@ -220,6 +260,8 @@ class IcebergToDagsterPartitionMapper:
 
     @property
     def updated_time_partition_field(self) -> str | None:
+        """If time partitions present, check whether these have been updated.
+        This happens when users change e.g. from an hourly to a daily partition."""
         # The assumption is that even a multi-partitioned table will have only one time partition
         time_partition = next(iter(self.dagster_time_partitions))
         updated_field_name: str | None = None
@@ -239,6 +281,7 @@ class IcebergToDagsterPartitionMapper:
         return updated_field_name
 
     def new(self) -> List[TablePartitionDimension]:
+        """Retrieve partition dimensions that are not yet present in the iceberg table."""
         return [
             p
             for p in self.get_table_slice_partition_dimensions()
@@ -246,6 +289,7 @@ class IcebergToDagsterPartitionMapper:
         ]
 
     def updated(self) -> List[TablePartitionDimension]:
+        """Retrieve partition dimensions that have been updated."""
         return [
             p
             for p in self.get_table_slice_partition_dimensions()
@@ -253,11 +297,23 @@ class IcebergToDagsterPartitionMapper:
         ]
 
     def deleted(self) -> List[partitioning.PartitionField]:
+        """Retrieve partition fields need to be removed from the iceberg table."""
         return [
             p
             for p in self.iceberg_partition_spec.fields
             if p.name in self.deleted_partition_field_names
         ]
+
+
+class IcebergTableSpecUpdater:
+
+    def __init__(
+        self,
+        partition_mapping: IcebergToDagsterPartitionMapper,
+        schema_update_mode: str,
+    ):
+        self.schema_update_mode = schema_update_mode
+        self.partition_mapping = partition_mapping
 
 
 def _update_table_spec(
@@ -284,6 +340,8 @@ def _get_row_filter(
     iceberg_partition_spec: PartitionSpec,
     dagster_partition_dimensions: Sequence[TablePartitionDimension],
 ) -> E.BooleanExpression:
+    """Construct an iceberg row filter based on dagster partition dimensions
+    that can be used to overwrite those specific rows in the iceberg table."""
     partition_filters = partition_dimensions_to_filters(
         partition_dimensions=dagster_partition_dimensions,
         table_schema=iceberg_table_schema,
@@ -298,10 +356,27 @@ def _get_row_filter(
 
 def _table_writer(
     table_slice: TableSlice,
-    data: ArrowTypes,
+    data: pa.Table,
     catalog: CatalogTypes,
     schema_update_mode: str,
 ) -> None:
+    """Writes data to an iceberg table
+
+    Args:
+        table_slice (TableSlice): dagster database IO manager table slice. This
+            contains information about dagster partitions.
+        data (pa.Table): PyArrow table
+        catalog (CatalogTypes): PyIceberg catalogs supported by this library
+        schema_update_mode (str): Whether to process schema updates on existing
+            tables or error, value is either 'error' or 'update'
+
+    Raises:
+        ValueError: Raised when partition dimension metadata is not set on an
+            asset but the user attempts to use partitition definitions.
+        ValueError: Raised when schema update mode is set to 'error' and
+            asset partition definitions on an existing table do not match
+            the table partition spec.
+    """
     table_path = f"{table_slice.schema}.{table_slice.table}"
     # In practice, partition_dimensions is an empty list for unpartitioned assets and not None
     #  even though it's the default value. To pass the static type checker, we need to ensure
