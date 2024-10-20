@@ -357,12 +357,12 @@ def test_table_writer_multi_partitioned_update(catalog: SqlCatalog, data: pa.Tab
     assert all([v == 10 for v in data_out["value"]])
 
 
-def test_table_writer_multi_partitioned_update_schema_change(
+def test_table_writer_multi_partitioned_update_partition_spec_change(
     warehouse_path: str, catalog: SqlCatalog, data: pa.Table
 ):
     handler._table_writer(
         table_slice=TableSlice(
-            table="data_multi_partitioned_update_schema_change",
+            table="data_multi_partitioned_update_partition_spec_change",
             schema="pytest",
             partition_dimensions=[
                 TablePartitionDimension(
@@ -382,7 +382,7 @@ def test_table_writer_multi_partitioned_update_schema_change(
     )
     handler._table_writer(
         table_slice=TableSlice(
-            table="data_multi_partitioned_update_schema_change",
+            table="data_multi_partitioned_update_partition_spec_change",
             schema="pytest",
             partition_dimensions=[
                 TablePartitionDimension(
@@ -402,7 +402,7 @@ def test_table_writer_multi_partitioned_update_schema_change(
     path_to_dwh = (
         plb.Path(warehouse_path)
         / "pytest.db"
-        / "data_multi_partitioned_update_schema_change"
+        / "data_multi_partitioned_update_partition_spec_change"
         / "data"
         / "timestamp=2023-01-01-00"
     )
@@ -410,7 +410,9 @@ def test_table_writer_multi_partitioned_update_schema_change(
     assert categories == ["category=A", "category=B", "category=C"]
     assert (
         len(
-            catalog.load_table("pytest.data_multi_partitioned_update_schema_change")
+            catalog.load_table(
+                "pytest.data_multi_partitioned_update_partition_spec_change"
+            )
             .scan()
             .to_arrow()
             .to_pydict()["value"]
@@ -419,12 +421,12 @@ def test_table_writer_multi_partitioned_update_schema_change(
     )
 
 
-def test_table_writer_multi_partitioned_update_schema_change_error(
+def test_table_writer_multi_partitioned_update_partition_spec_error(
     warehouse_path: str, catalog: SqlCatalog, data: pa.Table
 ):
     handler._table_writer(
         table_slice=TableSlice(
-            table="data_multi_partitioned_update_schema_change_error",
+            table="data_multi_partitioned_update_partition_spec_error",
             schema="pytest",
             partition_dimensions=[
                 TablePartitionDimension(
@@ -447,7 +449,7 @@ def test_table_writer_multi_partitioned_update_schema_change_error(
     ):
         handler._table_writer(
             table_slice=TableSlice(
-                table="data_multi_partitioned_update_schema_change_error",
+                table="data_multi_partitioned_update_partition_spec_error",
                 schema="pytest",
                 partition_dimensions=[
                     TablePartitionDimension(
