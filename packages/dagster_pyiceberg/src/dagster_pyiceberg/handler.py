@@ -400,25 +400,6 @@ class IcebergTableSpecUpdater:
                                     )
 
 
-def _update_table_spec(
-    table: table.Table, partition_dimensions: Sequence[TablePartitionDimension]
-) -> None:
-    if len(partition_dimensions) == 0:
-        return
-    with table.update_spec() as update:
-        for partition in partition_dimensions:
-            if isinstance(partition.partitions, TimeWindow):
-                transform = diff_to_transformation(*partition.partitions)
-            else:
-                transform = transforms.IdentityTransform()
-            update.add_field(
-                source_column_name=partition.partition_expr,
-                transform=transform,
-                # Name the partition field spec the same as the column name
-                partition_field_name=partition.partition_expr,
-            )
-
-
 def _get_row_filter(
     iceberg_table_schema: Schema,
     iceberg_partition_spec: PartitionSpec,
