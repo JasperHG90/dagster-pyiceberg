@@ -30,7 +30,7 @@ from .config import IcebergRestCatalogConfig, IcebergSqlCatalogConfig  # noqa
 from .handler import CatalogTypes
 
 
-class SchemaUpdateMode(enum.Enum):
+class PartitionSpecUpdateMode(enum.Enum):
     error = "error"
     update = "update"
 
@@ -50,7 +50,7 @@ class _IcebergTableIOManagerResourceConfig(TypedDict):
 
     name: str
     config: _IcebergMetastoreCatalogConfig
-    schema_update_mode: SchemaUpdateMode
+    partition_spec_update_mode: PartitionSpecUpdateMode
 
 
 class IcebergDbClient(DbClient):
@@ -114,9 +114,9 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
         alias="schema",
         description="Name of the iceberg catalog schema to use.",
     )  # schema is a reserved word for pydantic
-    schema_update_mode: SchemaUpdateMode = Field(
-        default=SchemaUpdateMode.error,
-        description="Logic to use when updating an iceberg table with non-matching dagster partitions.",
+    schema_update_mode: PartitionSpecUpdateMode = Field(
+        default=PartitionSpecUpdateMode.error,
+        description="Logic to use when updating an iceberg table partition spec with non-matching dagster partitions.",
     )
 
     @staticmethod

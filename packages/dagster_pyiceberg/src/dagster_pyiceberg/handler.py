@@ -110,7 +110,7 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
         metadata = context.definition_metadata or {}  # noqa
         resource_config = context.resource_config or {}  # noqa
 
-        schema_update_mode = str(resource_config["schema_update_mode"])
+        partition_spec_update_mode = str(resource_config["partition_spec_update_mode"])
 
         data = self.to_arrow(obj)
 
@@ -118,7 +118,7 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
             table_slice=table_slice,
             data=data,
             catalog=connection,
-            schema_update_mode=schema_update_mode,
+            partition_spec_update_mode=partition_spec_update_mode,
         )
 
     def load_input(
@@ -315,9 +315,9 @@ class IcebergTableSpecUpdater:
     def __init__(
         self,
         partition_mapping: IcebergToDagsterPartitionMapper,
-        schema_update_mode: str,
+        partition_spec_update_mode: str,
     ):
-        self.schema_update_mode = schema_update_mode
+        self.partition_spec_update_mode = partition_spec_update_mode
         self.partition_mapping = partition_mapping
 
     def _changes(
@@ -365,7 +365,10 @@ class IcebergTableSpecUpdater:
         return len([*itertools.chain.from_iterable(self._changes().values())])
 
     def update_table_spec(self, table: table.Table):
-        if self.schema_update_mode == "error" and self.number_of_table_spec_changes > 0:
+        if (
+            self.partition_spec_update_mode == "error"
+            and self.number_of_table_spec_changes > 0
+        ):
             raise ValueError(
                 "Schema update mode is set to 'error' but there are schema changes to the Iceberg table"
             )
@@ -432,7 +435,7 @@ def _table_writer(
     table_slice: TableSlice,
     data: pa.Table,
     catalog: CatalogTypes,
-    schema_update_mode: str,
+    partition_spec_update_mode: str,
 ) -> None:
     """Writes data to an iceberg table
 
@@ -479,7 +482,10 @@ def _table_writer(
                 iceberg_table_schema=table.schema(),
                 iceberg_partition_spec=table.spec(),
             ).new()
-            if schema_update_mode == "error" and len(new_partition_dimensions) > 0:
+            if (
+                partition_spec_update_mode == "error"
+                and len(new_partition_dimensions) > 0
+            ):
                 raise ValueError(
                     f"Partition dimensions do not match. New partitions: {new_partition_dimensions}"
                 )
