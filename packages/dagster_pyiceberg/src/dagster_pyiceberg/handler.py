@@ -347,6 +347,7 @@ def _table_writer(
         #  and these need transforms
         # We can base them on the partition dimensions, but optionally we can allow users
         #  to pass these as metadata to the asset
+        # TODO: add updates and deletes
         if partition_dimensions is not None:
             _update_table_spec(table=table, partition_dimensions=partition_dimensions)
 
