@@ -64,7 +64,7 @@ The table below shows which PyIceberg features are currently available.
 | Schema evolution | ❌ | https://py.iceberg.apache.org/api/#schema-evolution | More complicated than e.g. delta lake since updates require diffing input table with existing Iceberg table. Approach should be similar to partition evolution. |
 | Sort order | ❌ | https://shorturl.at/TycZN |  |
 | PyIceberg commit retries | ✅ | https://github.com/apache/iceberg-python/pull/330 https://github.com/apache/iceberg-python/issues/269 | PR to add this to PyIceberg is open. Will probably be merged for an upcoming release. Added a custom retry function using Tenacity for the time being. |
-| Partition evolution | ✅ | https://py.iceberg.apache.org/api/#partition-evolution | Create, Update, Delete |
+| Partition evolution | ✅ | https://py.iceberg.apache.org/api/#partition-evolution | Create, Update, Delete partitions by updating the Dagster partitions definition |
 | Table properties | ❌ | https://py.iceberg.apache.org/api/#table-properties | Can add this through metadata on the asset. |
 | Snapshot properties | ❌ | https://py.iceberg.apache.org/api/#snapshot-properties | Useful for correlating Dagster runs to snapshots by adding tags to snapshot. |
 
