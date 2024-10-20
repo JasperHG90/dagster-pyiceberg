@@ -445,7 +445,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_error(
         & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1))
     )
     with pytest.raises(
-        ValueError, match="Schema update mode is set to 'error' but there"
+        ValueError, match="Partition spec update mode is set to 'error' but there"
     ):
         handler._table_writer(
             table_slice=TableSlice(
@@ -588,7 +588,7 @@ def test_iceberg_table_spec_updater_delete_field(
     spec_updater.update_table_spec(table=mock_iceberg_table)
     mock_iceberg_table.update_spec.assert_called_once()
     mock_iceberg_table.update_spec.return_value.__enter__.return_value.remove_field.assert_called_once_with(
-        partition_name="category"
+        name="category"
     )
 
 
@@ -622,7 +622,7 @@ def test_iceberg_table_spec_updater_update_field(
     spec_updater.update_table_spec(table=mock_iceberg_table)
     mock_iceberg_table.update_spec.assert_called_once()
     mock_iceberg_table.update_spec.return_value.__enter__.return_value.remove_field.assert_called_once_with(
-        partition_name="timestamp"
+        name="timestamp"
     )
     mock_iceberg_table.update_spec.return_value.__enter__.return_value.add_field.assert_called_once_with(
         source_column_name="timestamp",
@@ -686,5 +686,5 @@ def test_iceberg_table_spec_updater_fails_with_error_update_mode(
         partition_spec_update_mode="error",
     )
     mock_iceberg_table = mock.MagicMock()
-    with pytest.raises(ValueError, match="Schema update mode is set to"):
+    with pytest.raises(ValueError, match="Partition spec update mode is set to"):
         spec_updater.update_table_spec(table=mock_iceberg_table)

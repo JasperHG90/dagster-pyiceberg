@@ -269,10 +269,11 @@ class IcebergToDagsterPartitionMapper:
         This happens when users change e.g. from an hourly to a daily partition."""
         # The assumption is that even a multi-partitioned table will have only one time partition
         time_partition = next(iter(self.dagster_time_partitions))
+        time_partition_partitions = cast(TimeWindow, time_partition.partitions)
         updated_field_name: str | None = None
         if time_partition is not None:
             time_partition_transformation = diff_to_transformation(
-                time_partition.partitions.start, time_partition.partitions.end
+                time_partition_partitions.start, time_partition_partitions.end
             )
             # Check if field is present in iceberg partition spec
             current_time_partition_field = self.get_iceberg_partition_field_by_name(
@@ -336,7 +337,7 @@ class IcebergTableSpecUpdater:
 
     def _spec_delete(self, update: UpdateSpec, partition_name: str):
         try:
-            update.remove_field(partition_name=partition_name)
+            update.remove_field(name=partition_name)
         except ValueError:
             # Already deleted by another operation
             pass
