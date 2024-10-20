@@ -492,7 +492,7 @@ def test_iceberg_to_dagster_partition_mapper_new_fields(
             ),
         ],
     )
-    new_partitions = handler.IcebergToDagsterPartitionMapper(
+    new_partitions = handler.PartitionMapper(
         iceberg_table_schema=iceberg_table_schema,
         iceberg_partition_spec=spec,
         table_slice=table_slice,
@@ -520,7 +520,7 @@ def test_iceberg_to_dagster_partition_mapper_changed_time_partition(
             ),
         ],
     )
-    updated_partitions = handler.IcebergToDagsterPartitionMapper(
+    updated_partitions = handler.PartitionMapper(
         iceberg_table_schema=iceberg_table_schema,
         iceberg_partition_spec=spec,
         table_slice=table_slice,
@@ -545,7 +545,7 @@ def test_iceberg_to_dagster_partition_mapper_deleted(
         schema="pytest",
         partition_dimensions=[],
     )
-    deleted_partitions = handler.IcebergToDagsterPartitionMapper(
+    deleted_partitions = handler.PartitionMapper(
         iceberg_table_schema=iceberg_table_schema,
         iceberg_partition_spec=spec,
         table_slice=table_slice,
@@ -577,7 +577,7 @@ def test_iceberg_table_spec_updater_delete_field(
         ],
     )
     spec_updater = handler.IcebergTableSpecUpdater(
-        partition_mapping=handler.IcebergToDagsterPartitionMapper(
+        partition_mapping=handler.PartitionMapper(
             iceberg_table_schema=iceberg_table_schema,
             iceberg_partition_spec=spec,
             table_slice=table_slice,
@@ -611,7 +611,7 @@ def test_iceberg_table_spec_updater_update_field(
         ],
     )
     spec_updater = handler.IcebergTableSpecUpdater(
-        partition_mapping=handler.IcebergToDagsterPartitionMapper(
+        partition_mapping=handler.PartitionMapper(
             iceberg_table_schema=iceberg_table_schema,
             iceberg_partition_spec=spec,
             table_slice=table_slice,
@@ -646,7 +646,7 @@ def test_iceberg_table_spec_updater_add_field(
         ],
     )
     spec_updater = handler.IcebergTableSpecUpdater(
-        partition_mapping=handler.IcebergToDagsterPartitionMapper(
+        partition_mapping=handler.PartitionMapper(
             iceberg_table_schema=iceberg_table_schema,
             iceberg_partition_spec=spec,
             table_slice=table_slice,
@@ -678,7 +678,7 @@ def test_iceberg_table_spec_updater_fails_with_error_update_mode(
         ],
     )
     spec_updater = handler.IcebergTableSpecUpdater(
-        partition_mapping=handler.IcebergToDagsterPartitionMapper(
+        partition_mapping=handler.PartitionMapper(
             iceberg_table_schema=iceberg_table_schema,
             iceberg_partition_spec=spec,
             table_slice=table_slice,

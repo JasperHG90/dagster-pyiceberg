@@ -153,7 +153,7 @@ class IcebergPyArrowTypeHandler(IcebergBaseArrowTypeHandler[ArrowTypes]):
         return (pa.Table, pa.RecordBatchReader)
 
 
-class IcebergToDagsterPartitionMapper:
+class PartitionMapper:
 
     def __init__(
         self,
@@ -264,7 +264,7 @@ class IcebergToDagsterPartitionMapper:
         return time_partitions
 
     @property
-    def updated_time_partition_field(self) -> str | None:
+    def updated_dagster_time_partition_field(self) -> str | None:
         """If time partitions present, check whether these have been updated.
         This happens when users change e.g. from an hourly to a daily partition."""
         # The assumption is that even a multi-partitioned table will have only one time partition
@@ -300,7 +300,7 @@ class IcebergToDagsterPartitionMapper:
         return [
             p
             for p in self.get_table_slice_partition_dimensions()
-            if p.partition_expr == self.updated_time_partition_field
+            if p.partition_expr == self.updated_dagster_time_partition_field
         ]
 
     def deleted(self) -> List[partitioning.PartitionField]:
@@ -316,7 +316,7 @@ class IcebergTableSpecUpdater:
 
     def __init__(
         self,
-        partition_mapping: IcebergToDagsterPartitionMapper,
+        partition_mapping: PartitionMapper,
         partition_spec_update_mode: str,
     ):
         self.partition_spec_update_mode = partition_spec_update_mode
@@ -476,7 +476,7 @@ def _table_writer(
         #  But this should be a configuration option per table
         if partition_dimensions is not None:
             IcebergTableSpecUpdater(
-                partition_mapping=IcebergToDagsterPartitionMapper(
+                partition_mapping=PartitionMapper(
                     table_slice=table_slice,
                     iceberg_table_schema=table.schema(),
                     iceberg_partition_spec=table.spec(),
@@ -495,7 +495,7 @@ def _table_writer(
         # TODO: add updates and deletes
         if partition_dimensions is not None:
             IcebergTableSpecUpdater(
-                partition_mapping=IcebergToDagsterPartitionMapper(
+                partition_mapping=PartitionMapper(
                     table_slice=table_slice,
                     iceberg_table_schema=table.schema(),
                     iceberg_partition_spec=table.spec(),
