@@ -35,21 +35,11 @@ The following engines are currently implemented.
 - arrow
 - pandas
 
-
-
 ## To do
 
 - Add additional configuration options
   + Partition update error or update DONE
   + Sort ordering
-- Updating partitions
-  + [Existing partitions](https://py.iceberg.apache.org/api/#partition-evolution)
-    + PartitionUpdateDiffer should also check if existing partitions are being updated (e.g. daily to hourly)
-  + [Removing partitions](https://py.iceberg.apache.org/api/#remove-fields)
 - Examples:
   + Add cmd for running examples
   + Remove retry policy since we have fn to overwrite with retries
-
-Make overview with what is and is not supported right now.
-
-Schema evolution? -> https://py.iceberg.apache.org/api/#union-by-name -> Manual action
