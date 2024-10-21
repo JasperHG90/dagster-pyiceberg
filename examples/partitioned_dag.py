@@ -23,6 +23,7 @@ resources = {
             properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
         ),
         schema="dagster",
+        schema_update_mode="update",
     )
 }
 
@@ -37,10 +38,14 @@ partition = DailyPartitionsDefinition(
     partitions_def=partition,
     metadata={"partition_expr": "date"},
 )
-def asset_1():
+def asset_1(context):
+
     data = {
-        "date": [dt.datetime(2024, 10, i + 1, 0) for i in range(20)],
+        "date": [
+            dt.datetime.strptime(context.partition_key, "%Y-%m-%d") for _ in range(20)
+        ],
         "values": np.random.normal(0, 1, 20).tolist(),
+        "category": ["A"] * 10 + ["B"] * 10,
     }
     return pa.Table.from_pydict(data)
 
