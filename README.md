@@ -65,7 +65,7 @@ The table below shows which PyIceberg features are currently available.
 | Sort order | ❌ | https://shorturl.at/TycZN | These can be partitions but that's not necessary. Also, they require a transform. Easiest thing to do is to allow end-users to set this in metadata. |
 | PyIceberg commit retries | ✅ | https://github.com/apache/iceberg-python/pull/330 https://github.com/apache/iceberg-python/issues/269 | PR to add this to PyIceberg is open. Will probably be merged for an upcoming release. Added a custom retry function using Tenacity for the time being. |
 | Partition evolution | ✅ | https://py.iceberg.apache.org/api/#partition-evolution | Create, Update, Delete partitions by updating the Dagster partitions definition |
-| Table properties | ❌ | https://py.iceberg.apache.org/api/#table-properties | Can add this through metadata on the asset or through configuration options. Available properties [here](https://py.iceberg.apache.org/configuration/#tables) |
+| Table properties | ✅ | https://py.iceberg.apache.org/api/#table-properties | Added as metadata on an asset. NB: config options are not checked explicitly because users can add any key-value pair to a table. Available properties [here](https://py.iceberg.apache.org/configuration/#tables) |
 | Snapshot properties | ❌ | https://py.iceberg.apache.org/api/#snapshot-properties | Useful for correlating Dagster runs to snapshots by adding tags to snapshot. |
 |
 

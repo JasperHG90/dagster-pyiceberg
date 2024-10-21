@@ -470,6 +470,28 @@ def test_table_writer_multi_partitioned_update_partition_spec_error(
         )
 
 
+def test_iceberg_table_writer_with_table_properties(
+    catalog: SqlCatalog, data: pa.Table
+):
+    handler._table_writer(
+        table_slice=TableSlice(
+            table="data_iceberg_table_writer_with_table_properties",
+            schema="pytest",
+            partition_dimensions=[],
+        ),
+        data=data,
+        catalog=catalog,
+        partition_spec_update_mode="update",
+        table_properties={
+            "write.parquet.page-size-bytes": "2048",  # 2MB
+            "write.parquet.page-row-limit": "10000",
+        },
+    )
+    table = catalog.load_table("pytest.data_iceberg_table_writer_with_table_properties")
+    assert table.properties["write.parquet.page-size-bytes"] == "2048"
+    assert table.properties["write.parquet.page-row-limit"] == "10000"
+
+
 def test_iceberg_to_dagster_partition_mapper_new_fields(
     iceberg_table_schema: iceberg_schema.Schema,
 ):
