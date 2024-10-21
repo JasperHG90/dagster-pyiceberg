@@ -119,6 +119,7 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
             data=data,
             catalog=connection,
             partition_spec_update_mode=partition_spec_update_mode,
+            run_id=context.run_id,
         )
 
     def load_input(
@@ -434,6 +435,7 @@ def _table_writer(
     data: pa.Table,
     catalog: CatalogTypes,
     partition_spec_update_mode: str,
+    run_id: str,
 ) -> None:
     """Writes data to an iceberg table
 
@@ -557,7 +559,14 @@ def _overwrite_table_with_retries(
                         #  DELETE: In case existing Parquet files can be dropped completely.
                         #  REPLACE: In case existing Parquet files need to be rewritten.
                         #  APPEND: In case new data is being inserted into the table.
-                        tx.overwrite(df=df, overwrite_filter=overwrite_filter)
+                        tx.overwrite(
+                            df=df,
+                            overwrite_filter=overwrite_filter,
+                            snapshot_properties={
+                                "created_by": "dagster",
+                                "run_id": "placeholder",
+                            },
+                        )
                         tx.commit_transaction()
                 except CommitFailedException:
                     # Do not refresh on the final try
