@@ -61,7 +61,7 @@ The table below shows which PyIceberg features are currently available.
 | Feature | Supported | Link | Comment |
 |---|---|---|---|
 | Add existing files | ❌ | https://py.iceberg.apache.org/api/#add-files | Useful for existing partitions that users don't want to re-materialize/re-compute. |
-| Schema evolution | ❌ | https://py.iceberg.apache.org/api/#schema-evolution | More complicated than e.g. delta lake since updates require diffing input table with existing Iceberg table. Approach should be similar to partition evolution. |
+| Schema evolution | ❌ | https://py.iceberg.apache.org/api/#schema-evolution | More complicated than e.g. delta lake since updates require diffing input table with existing Iceberg table. We won't implement this because it's not clear how we should rename or delete columns. Users must change the schema of a table themselves. |
 | Sort order | ❌ | https://shorturl.at/TycZN | These can be partitions but that's not necessary. Also, they require a transform. Easiest thing to do is to allow end-users to set this in metadata. |
 | PyIceberg commit retries | ✅ | https://github.com/apache/iceberg-python/pull/330 https://github.com/apache/iceberg-python/issues/269 | PR to add this to PyIceberg is open. Will probably be merged for an upcoming release. Added a custom retry function using Tenacity for the time being. |
 | Partition evolution | ✅ | https://py.iceberg.apache.org/api/#partition-evolution | Create, Update, Delete partitions by updating the Dagster partitions definition |
