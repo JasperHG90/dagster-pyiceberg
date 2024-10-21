@@ -730,3 +730,43 @@ def test_iceberg_table_spec_updater_fails_with_error_update_mode(
     mock_iceberg_table = mock.MagicMock()
     with pytest.raises(ValueError, match="Partition spec update mode is set to"):
         spec_updater.update_table_spec(table=mock_iceberg_table)
+
+
+def test_schema_differ_removed_fields():
+    schema_current = pa.schema(
+        [
+            pa.field("timestamp", pa.timestamp("ns")),
+            pa.field("category", pa.string()),
+        ]
+    )
+    schema_new = pa.schema(
+        [
+            pa.field("timestamp", pa.timestamp("ns")),
+        ]
+    )
+    schema_differ = handler.SchemaDiffer(
+        current_table_schema=schema_current,
+        new_table_schema=schema_new,
+    )
+    assert schema_differ.has_changes
+    assert schema_differ.deleted_columns == ["category"]
+
+
+# def test_schema_differ_added_fields():
+#     schema_current = pa.schema(
+#         [
+#             pa.field("timestamp", pa.timestamp("ns")),
+#         ]
+#     )
+#     schema_new = pa.schema(
+#         [
+#             pa.field("timestamp", pa.timestamp("ns")),
+#             pa.field("category", pa.string()),
+#         ]
+#     )
+#     schema_differ = handler.SchemaDiffer(
+#         current_table_schema=schema_current,
+#         new_table_schema=schema_new,
+#     )
+#     assert schema_differ.has_changes
+#     assert schema_differ.deleted_columns == ["category"]

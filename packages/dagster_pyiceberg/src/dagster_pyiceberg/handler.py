@@ -1,6 +1,7 @@
 import datetime as dt
 import itertools
 from abc import abstractmethod
+from functools import cached_property
 from typing import (
     Dict,
     Generic,
@@ -46,34 +47,6 @@ partition_types = T.StringType
 
 ArrowTypes = Union[pa.Table, pa.RecordBatchReader]
 CatalogTypes = Union[SqlCatalog, RestCatalog]
-
-
-def date_diff(start: dt.datetime, end: dt.datetime) -> pendulum.Interval:
-    """Compute an interval between two dates"""
-    start_ = pendulum.instance(start)
-    end_ = pendulum.instance(end)
-    return end_ - start_
-
-
-def diff_to_transformation(
-    start: dt.datetime, end: dt.datetime
-) -> transforms.Transform:
-    """Based on the interval between two dates, return a transformation"""
-    delta = date_diff(start, end)
-    match delta.in_hours():
-        case 1:
-            return transforms.HourTransform()
-        case 24:
-            return transforms.DayTransform()
-        case 168:
-            return transforms.DayTransform()  # No week transform available
-        case _:
-            if delta.in_months() == 1:
-                return transforms.MonthTransform()
-            else:
-                raise NotImplementedError(
-                    f"Unsupported time window: {delta.in_words()}"
-                )
 
 
 class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
@@ -163,6 +136,91 @@ class IcebergPyArrowTypeHandler(IcebergBaseArrowTypeHandler[ArrowTypes]):
     @property
     def supported_types(self) -> Sequence[Type[object]]:
         return (pa.Table, pa.RecordBatchReader)
+
+
+def date_diff(start: dt.datetime, end: dt.datetime) -> pendulum.Interval:
+    """Compute an interval between two dates"""
+    start_ = pendulum.instance(start)
+    end_ = pendulum.instance(end)
+    return end_ - start_
+
+
+def diff_to_transformation(
+    start: dt.datetime, end: dt.datetime
+) -> transforms.Transform:
+    """Based on the interval between two dates, return a transformation"""
+    delta = date_diff(start, end)
+    match delta.in_hours():
+        case 1:
+            return transforms.HourTransform()
+        case 24:
+            return transforms.DayTransform()
+        case 168:
+            return transforms.DayTransform()  # No week transform available
+        case _:
+            if delta.in_months() == 1:
+                return transforms.MonthTransform()
+            else:
+                raise NotImplementedError(
+                    f"Unsupported time window: {delta.in_words()}"
+                )
+
+
+class SchemaDiffer:
+
+    def __init__(self, current_table_schema: pa.Schema, new_table_schema: pa.Schema):
+        self.current_table_schema = current_table_schema
+        self.new_table_schema = new_table_schema
+
+    @property
+    def has_changes(self) -> bool:
+        return not self.current_table_schema.equals(self.new_table_schema)
+
+    @cached_property
+    def deleted_columns(self) -> List[str]:
+        return list(
+            set(self.current_table_schema.names) - set(self.new_table_schema.names)
+        )
+
+
+class IcebergTableSchemaUpdater:
+
+    def __init__(
+        self,
+        schema_differ: SchemaDiffer,
+        schema_update_mode: str,
+    ):
+        self.schema_update_mode = schema_update_mode
+        self.schema_differ = schema_differ
+
+    @staticmethod
+    def _delete_column(update: table.UpdateSchema, column: str):
+        try:
+            update.remove_column(column)
+        except ValueError:
+            # Already deleted by another operation
+            pass
+
+    @staticmethod
+    def _merge_schemas(update: table.UpdateSchema, new_table_schema: pa.Schema):
+        try:
+            update.union_by_name(new_table_schema)
+        except ValueError:
+            # Already merged by another operation
+            pass
+
+    def update_table_schema(self, table: table.Table):
+        if self.schema_update_mode == "error" and self.schema_differ.has_changes:
+            raise ValueError(
+                "Schema spec update mode is set to 'error' but there are schema changes to the Iceberg table"
+            )
+        elif not self.schema_differ.has_changes:
+            return
+        else:
+            with table.update_schema() as update:
+                for column in self.schema_differ.deleted_columns:
+                    self._delete_column(update, column)
+                self._merge_schemas(update, self.schema_differ.new_table_schema)
 
 
 class PartitionMapper:
@@ -374,20 +432,21 @@ class IcebergTableSpecUpdater:
             pass
 
     @property
-    def number_of_table_spec_changes(self) -> int:
+    def has_changes(self) -> bool:
         """Return the number of changes to the Iceberg table spec."""
-        return len([*itertools.chain.from_iterable(self._changes().values())])
+        return (
+            True
+            if len([*itertools.chain.from_iterable(self._changes().values())]) > 0
+            else False
+        )
 
     def update_table_spec(self, table: table.Table):
-        if (
-            self.partition_spec_update_mode == "error"
-            and self.number_of_table_spec_changes > 0
-        ):
+        if self.partition_spec_update_mode == "error" and self.has_changes:
             raise ValueError(
                 "Partition spec update mode is set to 'error' but there are partition spec changes to the Iceberg table"
             )
         # If there are no changes, do nothing
-        elif self.number_of_table_spec_changes == 0:
+        elif not self.has_changes:
             return
         else:
             with table.update_spec() as update:
