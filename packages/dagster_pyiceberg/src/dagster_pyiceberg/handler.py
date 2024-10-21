@@ -206,7 +206,7 @@ class IcebergTableSchemaUpdater:
     @staticmethod
     def _delete_column(update: table.UpdateSchema, column: str):
         try:
-            update.remove_column(column)
+            update.delete_column(column)
         except ValueError:
             # Already deleted by another operation
             pass
