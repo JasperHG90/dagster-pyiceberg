@@ -441,6 +441,7 @@ dependencies = [
     { name = "dagster" },
     { name = "pendulum" },
     { name = "pyiceberg", extra = ["pyarrow"] },
+    { name = "tenacity" },
 ]
 
 [package.metadata]
@@ -449,6 +450,7 @@ requires-dist = [
     { name = "dagster", specifier = ">=1.8.2" },
     { name = "pendulum", specifier = ">=3.0.0" },
     { name = "pyiceberg", extras = ["pyarrow"], git = "https://github.com/apache/iceberg-python?rev=09ec814" },
+    { name = "tenacity", specifier = ">=8.5.0" },
 ]
 
 [[package]]
@@ -470,9 +472,6 @@ requires-dist = [
 name = "dagster-pyiceberg-project"
 version = "0.0.0"
 source = { virtual = "." }
-dependencies = [
-    { name = "tenacity" },
-]
 
 [package.dev-dependencies]
 dev = [
@@ -486,7 +485,6 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "tenacity", specifier = ">=8.5.0" }]
 
 [package.metadata.requires-dev]
 dev = [
