@@ -94,6 +94,7 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
         partition_spec_update_mode = cast(
             str, resource_config["partition_spec_update_mode"]
         )
+        schema_update_mode = cast(str, resource_config["schema_update_mode"])
 
         data = self.to_arrow(obj)
 
@@ -102,6 +103,7 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
             data=data,
             catalog=connection,
             partition_spec_update_mode=partition_spec_update_mode,
+            schema_update_mode=schema_update_mode,
             dagster_run_id=context.run_id,
             table_properties=table_properties_usr,
         )
@@ -174,7 +176,9 @@ class SchemaDiffer:
 
     @property
     def has_changes(self) -> bool:
-        return not self.current_table_schema.equals(self.new_table_schema)
+        return not sorted(self.current_table_schema.names) == sorted(
+            self.new_table_schema.names
+        )
 
     @cached_property
     def deleted_columns(self) -> List[str]:
@@ -511,6 +515,7 @@ def _table_writer(
     table_slice: TableSlice,
     data: pa.Table,
     catalog: CatalogTypes,
+    schema_update_mode: str,
     partition_spec_update_mode: str,
     dagster_run_id: str,
     table_properties: Optional[Dict[str, str]] = None,
@@ -553,8 +558,15 @@ def _table_writer(
         partition_dimensions = table_slice.partition_dimensions
     if catalog.table_exists(table_path):
         table = catalog.load_table(table_path)
+        # Check if schema matches. If not, update
+        IcebergTableSchemaUpdater(
+            schema_differ=SchemaDiffer(
+                current_table_schema=table.schema().as_arrow(),
+                new_table_schema=data.schema,
+            ),
+            schema_update_mode=schema_update_mode,
+        ).update_table_schema(table=table)
         # Check if partitions match. If not, update
-        #  But this should be a configuration option per table
         if partition_dimensions is not None:
             IcebergTableSpecUpdater(
                 partition_mapping=PartitionMapper(

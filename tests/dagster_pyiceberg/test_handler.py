@@ -245,6 +245,7 @@ def test_table_writer(catalog: SqlCatalog, data: pa.Table):
         ),
         data=data,
         catalog=catalog,
+        schema_update_mode="update",
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
     )
@@ -282,6 +283,7 @@ def test_table_writer_partitioned(catalog: SqlCatalog, data: pa.Table):
         ),
         data=data,
         catalog=catalog,
+        schema_update_mode="update",
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
     )
@@ -316,6 +318,7 @@ def test_table_writer_multi_partitioned(catalog: SqlCatalog, data: pa.Table):
         ),
         data=data,
         catalog=catalog,
+        schema_update_mode="update",
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
     )
@@ -352,6 +355,7 @@ def test_table_writer_multi_partitioned_update(catalog: SqlCatalog, data: pa.Tab
         ),
         data=data,
         catalog=catalog,
+        schema_update_mode="update",
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
     )
@@ -388,6 +392,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_change(
         ),
         data=data,
         catalog=catalog,
+        schema_update_mode="update",
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
     )
@@ -413,6 +418,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_change(
         ),
         data=data_,
         catalog=catalog,
+        schema_update_mode="update",
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
     )
@@ -454,6 +460,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_error(
         ),
         data=data,
         catalog=catalog,
+        schema_update_mode="update",
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
     )
@@ -484,6 +491,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_error(
             ),
             data=data_,
             catalog=catalog,
+            schema_update_mode="update",
             partition_spec_update_mode="error",
             dagster_run_id="hfkghdgsh467374828",
         )
@@ -500,6 +508,7 @@ def test_iceberg_table_writer_with_table_properties(
         ),
         data=data,
         catalog=catalog,
+        schema_update_mode="update",
         partition_spec_update_mode="update",
         table_properties={
             "write.parquet.page-size-bytes": "2048",  # 2MB

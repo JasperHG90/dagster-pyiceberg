@@ -35,6 +35,11 @@ class PartitionSpecUpdateMode(enum.Enum):
     update = "update"
 
 
+class SchemaUpdateMode(enum.Enum):
+    error = "error"
+    update = "update"
+
+
 class _IcebergCatalogProperties(TypedDict):
 
     properties: Dict[str, str]
@@ -51,6 +56,7 @@ class _IcebergTableIOManagerResourceConfig(TypedDict):
     name: str
     config: _IcebergMetastoreCatalogConfig
     partition_spec_update_mode: PartitionSpecUpdateMode
+    schema_update_mode: SchemaUpdateMode
 
 
 class IcebergDbClient(DbClient):
@@ -117,6 +123,10 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
     partition_spec_update_mode: PartitionSpecUpdateMode = Field(
         default=PartitionSpecUpdateMode.error,
         description="Logic to use when updating an iceberg table partition spec with non-matching dagster partitions.",
+    )
+    schema_update_mode: SchemaUpdateMode = Field(
+        default=SchemaUpdateMode.error,
+        description="Logic to use when updating an iceberg table schema.",
     )
 
     @staticmethod
