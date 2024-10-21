@@ -110,7 +110,9 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
         metadata = context.definition_metadata or {}  # noqa
         resource_config = context.resource_config or {}  # noqa
 
-        partition_spec_update_mode = str(resource_config["partition_spec_update_mode"])
+        partition_spec_update_mode = cast(
+            str, resource_config["partition_spec_update_mode"]
+        )
 
         data = self.to_arrow(obj)
 
