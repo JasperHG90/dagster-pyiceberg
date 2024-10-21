@@ -108,7 +108,10 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
     ):
         """Stores pyarrow types in Iceberg table"""
         metadata = context.definition_metadata or {}  # noqa
-        resource_config = context.resource_config or {}  # noqa
+        resource_config = context.resource_config or {}
+
+        # NB: not checking properties here
+        table_properties = metadata.get("table_properties", {})
 
         partition_spec_update_mode = cast(
             str, resource_config["partition_spec_update_mode"]
@@ -121,6 +124,7 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
             data=data,
             catalog=connection,
             partition_spec_update_mode=partition_spec_update_mode,
+            table_properties=table_properties,
         )
 
     def load_input(
@@ -436,6 +440,7 @@ def _table_writer(
     data: pa.Table,
     catalog: CatalogTypes,
     partition_spec_update_mode: str,
+    table_properties: Optional[Dict[str, str]] = None,
 ) -> None:
     """Writes data to an iceberg table
 
@@ -489,6 +494,7 @@ def _table_writer(
         table = catalog.create_table(
             table_path,
             schema=data.schema,
+            properties=table_properties if table_properties is not None else {},
         )
         # This is a bit tricky, we need to add partition columns to the table schema
         #  and these need transforms
