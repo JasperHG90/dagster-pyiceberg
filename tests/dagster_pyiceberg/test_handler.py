@@ -249,6 +249,17 @@ def test_table_writer(catalog: SqlCatalog, data: pa.Table):
         dagster_run_id="hfkghdgsh467374828",
     )
     assert catalog.table_exists("pytest.data_table_writer")
+    table = catalog.load_table("pytest.data_table_writer")
+    assert table.properties["dagster_run_id"] == "hfkghdgsh467374828"
+    assert table.properties["created_by"] == "dagster"
+    assert (
+        table.current_snapshot().summary.additional_properties["dagster_run_id"]
+        == "hfkghdgsh467374828"
+    )
+    assert (
+        table.current_snapshot().summary.additional_properties["created_by"]
+        == "dagster"
+    )
 
 
 def test_table_writer_partitioned(catalog: SqlCatalog, data: pa.Table):
