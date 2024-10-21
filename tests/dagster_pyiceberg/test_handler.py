@@ -814,7 +814,7 @@ def test_iceberg_schema_updater_delete_column():
     mock_iceberg_table = mock.MagicMock()
     schema_updater.update_table_schema(table=mock_iceberg_table)
     mock_iceberg_table.update_schema.assert_called_once()
-    mock_iceberg_table.update_schema.return_value.__enter__.return_value.remove_column.assert_called_once_with(
+    mock_iceberg_table.update_schema.return_value.__enter__.return_value.delete_column.assert_called_once_with(
         "value"
     )
 

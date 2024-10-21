@@ -106,6 +106,9 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
             partition_spec_update_mode=partition_spec_update_mode,
             schema_update_mode=schema_update_mode,
             dagster_run_id=context.run_id,
+            dagster_partition_key=(
+                context.partition_key if context.has_asset_partitions else None
+            ),
             table_properties=table_properties_usr,
         )
 
@@ -519,6 +522,7 @@ def _table_writer(
     schema_update_mode: str,
     partition_spec_update_mode: str,
     dagster_run_id: str,
+    dagster_partition_key: Optional[str] = None,
     table_properties: Optional[Dict[str, str]] = None,
 ) -> None:
     """Writes data to an iceberg table
@@ -621,7 +625,11 @@ def _table_writer(
         table=table,
         df=data,
         overwrite_filter=row_filter,
-        snapshot_properties=base_properties,
+        snapshot_properties=(
+            base_properties | {"dagster_partition_key": dagster_partition_key}
+            if dagster_partition_key is not None
+            else base_properties
+        ),
     )
 
 
