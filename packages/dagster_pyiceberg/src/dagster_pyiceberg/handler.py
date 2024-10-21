@@ -110,8 +110,13 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
         metadata = context.definition_metadata or {}  # noqa
         resource_config = context.resource_config or {}
 
-        # NB: not checking properties here
-        table_properties = metadata.get("table_properties", {})
+        # NB: not checking properties here, except for protected properties
+        table_properties_usr = metadata.get("table_properties", {})
+        for k, v in table_properties_usr.items():
+            if k in ["created_by", "run_id"]:
+                raise KeyError(
+                    f"Table properties cannot contain the following keys: {k}"
+                )
 
         partition_spec_update_mode = cast(
             str, resource_config["partition_spec_update_mode"]
@@ -125,7 +130,7 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
             catalog=connection,
             partition_spec_update_mode=partition_spec_update_mode,
             run_id=context.run_id,
-            table_properties=table_properties,
+            table_properties=table_properties_usr,
         )
 
     def load_input(
@@ -462,6 +467,7 @@ def _table_writer(
             the table partition spec.
     """
     table_path = f"{table_slice.schema}.{table_slice.table}"
+    base_properties = {"created_by": "dagster", "dagster_run_id": run_id}
     # In practice, partition_dimensions is an empty list for unpartitioned assets and not None
     #  even though it's the default value. To pass the static type checker, we need to ensure
     #  that table_slice.partition_dimensions is not None or an empty list.
@@ -496,7 +502,11 @@ def _table_writer(
         table = catalog.create_table(
             table_path,
             schema=data.schema,
-            properties=table_properties if table_properties is not None else {},
+            properties=(
+                table_properties | base_properties
+                if table_properties is not None
+                else base_properties
+            ),
         )
         # This is a bit tricky, we need to add partition columns to the table schema
         #  and these need transforms
@@ -532,6 +542,7 @@ def _table_writer(
         table=table,
         df=data,
         overwrite_filter=row_filter,
+        snapshot_properties=base_properties,
     )
 
 
@@ -539,6 +550,7 @@ def _overwrite_table_with_retries(
     table: table.Table,
     df: pa.Table,
     overwrite_filter: Union[E.BooleanExpression, str],
+    snapshot_properties: Optional[Dict[str, str]] = None,
     retries: int = 4,
 ):
     """Overwrites an iceberg table and retries on failure
@@ -570,10 +582,11 @@ def _overwrite_table_with_retries(
                         tx.overwrite(
                             df=df,
                             overwrite_filter=overwrite_filter,
-                            snapshot_properties={
-                                "created_by": "dagster",
-                                "run_id": "placeholder",
-                            },
+                            snapshot_properties=(
+                                snapshot_properties
+                                if snapshot_properties is not None
+                                else {}
+                            ),
                         )
                         tx.commit_transaction()
                 except CommitFailedException:
