@@ -129,7 +129,7 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
             data=data,
             catalog=connection,
             partition_spec_update_mode=partition_spec_update_mode,
-            run_id=context.run_id,
+            dagster_run_id=context.run_id,
             table_properties=table_properties_usr,
         )
 
@@ -446,7 +446,7 @@ def _table_writer(
     data: pa.Table,
     catalog: CatalogTypes,
     partition_spec_update_mode: str,
-    run_id: str,
+    dagster_run_id: str,
     table_properties: Optional[Dict[str, str]] = None,
 ) -> None:
     """Writes data to an iceberg table
@@ -467,7 +467,7 @@ def _table_writer(
             the table partition spec.
     """
     table_path = f"{table_slice.schema}.{table_slice.table}"
-    base_properties = {"created_by": "dagster", "dagster_run_id": run_id}
+    base_properties = {"created_by": "dagster", "dagster_run_id": dagster_run_id}
     # In practice, partition_dimensions is an empty list for unpartitioned assets and not None
     #  even though it's the default value. To pass the static type checker, we need to ensure
     #  that table_slice.partition_dimensions is not None or an empty list.

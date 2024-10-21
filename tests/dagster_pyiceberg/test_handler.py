@@ -246,6 +246,7 @@ def test_table_writer(catalog: SqlCatalog, data: pa.Table):
         data=data,
         catalog=catalog,
         partition_spec_update_mode="update",
+        dagster_run_id="hfkghdgsh467374828",
     )
     assert catalog.table_exists("pytest.data_table_writer")
 
@@ -271,6 +272,7 @@ def test_table_writer_partitioned(catalog: SqlCatalog, data: pa.Table):
         data=data,
         catalog=catalog,
         partition_spec_update_mode="update",
+        dagster_run_id="hfkghdgsh467374828",
     )
     table = catalog.load_table("pytest.data_table_writer_partitioned")
     partition_field_names = [f.name for f in table.spec().fields]
@@ -304,6 +306,7 @@ def test_table_writer_multi_partitioned(catalog: SqlCatalog, data: pa.Table):
         data=data,
         catalog=catalog,
         partition_spec_update_mode="update",
+        dagster_run_id="hfkghdgsh467374828",
     )
     table = catalog.load_table("pytest.data_table_writer_multi_partitioned")
     partition_field_names = [f.name for f in table.spec().fields]
@@ -339,6 +342,7 @@ def test_table_writer_multi_partitioned_update(catalog: SqlCatalog, data: pa.Tab
         data=data,
         catalog=catalog,
         partition_spec_update_mode="update",
+        dagster_run_id="hfkghdgsh467374828",
     )
     table = catalog.load_table("pytest.data_multi_partitioned_update")
     data_out = (
@@ -374,6 +378,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_change(
         data=data,
         catalog=catalog,
         partition_spec_update_mode="update",
+        dagster_run_id="hfkghdgsh467374828",
     )
     data_ = data.filter(
         (pc.field("category") == "A")
@@ -398,6 +403,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_change(
         data=data_,
         catalog=catalog,
         partition_spec_update_mode="update",
+        dagster_run_id="hfkghdgsh467374828",
     )
     path_to_dwh = (
         plb.Path(warehouse_path)
@@ -438,6 +444,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_error(
         data=data,
         catalog=catalog,
         partition_spec_update_mode="update",
+        dagster_run_id="hfkghdgsh467374828",
     )
     data_ = data.filter(
         (pc.field("category") == "A")
@@ -467,6 +474,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_error(
             data=data_,
             catalog=catalog,
             partition_spec_update_mode="error",
+            dagster_run_id="hfkghdgsh467374828",
         )
 
 
@@ -486,6 +494,7 @@ def test_iceberg_table_writer_with_table_properties(
             "write.parquet.page-size-bytes": "2048",  # 2MB
             "write.parquet.page-row-limit": "10000",
         },
+        dagster_run_id="hfkghdgsh467374828",
     )
     table = catalog.load_table("pytest.data_iceberg_table_writer_with_table_properties")
     assert table.properties["write.parquet.page-size-bytes"] == "2048"
