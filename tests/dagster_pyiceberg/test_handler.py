@@ -808,3 +808,27 @@ def test_iceberg_schema_updater_delete_column():
     mock_iceberg_table.update_schema.return_value.__enter__.return_value.remove_column.assert_called_once_with(
         "value"
     )
+
+
+def test_iceberg_schema_updater_fails_with_error_update_mode():
+    schema_current = pa.schema(
+        [
+            pa.field("timestamp", pa.timestamp("ns")),
+        ]
+    )
+    schema_new = pa.schema(
+        [
+            pa.field("timestamp", pa.timestamp("ns")),
+            pa.field("category", pa.string()),
+        ]
+    )
+    schema_updater = handler.IcebergTableSchemaUpdater(
+        schema_differ=handler.SchemaDiffer(
+            current_table_schema=schema_current,
+            new_table_schema=schema_new,
+        ),
+        schema_update_mode="error",
+    )
+    mock_iceberg_table = mock.MagicMock()
+    with pytest.raises(ValueError):
+        schema_updater.update_table_schema(table=mock_iceberg_table)
