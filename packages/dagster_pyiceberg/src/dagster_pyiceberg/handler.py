@@ -182,6 +182,12 @@ class SchemaDiffer:
             set(self.current_table_schema.names) - set(self.new_table_schema.names)
         )
 
+    @cached_property
+    def new_columns(self) -> List[str]:
+        return list(
+            set(self.new_table_schema.names) - set(self.current_table_schema.names)
+        )
+
 
 class IcebergTableSchemaUpdater:
 
@@ -220,7 +226,8 @@ class IcebergTableSchemaUpdater:
             with table.update_schema() as update:
                 for column in self.schema_differ.deleted_columns:
                     self._delete_column(update, column)
-                self._merge_schemas(update, self.schema_differ.new_table_schema)
+                if self.schema_differ.new_columns:
+                    self._merge_schemas(update, self.schema_differ.new_table_schema)
 
 
 class PartitionMapper:
