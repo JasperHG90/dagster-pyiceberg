@@ -37,6 +37,7 @@ from pyiceberg.catalog.sql import SqlCatalog
 from pyiceberg.exceptions import CommitFailedException
 from pyiceberg.partitioning import PartitionSpec
 from pyiceberg.schema import Schema
+from pyiceberg.table.update.schema import UpdateSchema
 from pyiceberg.table.update.spec import UpdateSpec
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_random
 
@@ -204,7 +205,7 @@ class IcebergTableSchemaUpdater:
         self.schema_differ = schema_differ
 
     @staticmethod
-    def _delete_column(update: table.UpdateSchema, column: str):
+    def _delete_column(update: UpdateSchema, column: str):
         try:
             update.delete_column(column)
         except ValueError:
@@ -212,7 +213,7 @@ class IcebergTableSchemaUpdater:
             pass
 
     @staticmethod
-    def _merge_schemas(update: table.UpdateSchema, new_table_schema: pa.Schema):
+    def _merge_schemas(update: UpdateSchema, new_table_schema: pa.Schema):
         try:
             update.union_by_name(new_table_schema)
         except ValueError:
