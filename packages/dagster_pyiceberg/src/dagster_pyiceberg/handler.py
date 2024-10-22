@@ -242,7 +242,6 @@ class PartitionMapper:
 
     def __init__(
         self,
-        # TODO: add iceberg table and retrieve table schema and partition spec from there as properties
         iceberg_table_schema: Schema,
         iceberg_partition_spec: PartitionSpec,
         table_slice: TableSlice,
@@ -265,7 +264,6 @@ class PartitionMapper:
         """Retrieve dagster table slice partition dimensions."""
         # In practice, partition_dimensions is an empty list and not None
         #  But the type hint is Optional[Sequence[TablePartitionDimension]]
-        #  So we need to check for None here to pass the type checker
         partition_dimensions: Sequence[TablePartitionDimension] | None = None
         if not (
             self.table_slice.partition_dimensions is None
@@ -545,8 +543,7 @@ def _table_writer(
     table_path = f"{table_slice.schema}.{table_slice.table}"
     base_properties = {"created_by": "dagster", "dagster_run_id": dagster_run_id}
     # In practice, partition_dimensions is an empty list for unpartitioned assets and not None
-    #  even though it's the default value. To pass the static type checker, we need to ensure
-    #  that table_slice.partition_dimensions is not None or an empty list.
+    #  even though it's the default value.
     partition_exprs: List[str] | None = None
     partition_dimensions: Sequence[TablePartitionDimension] | None = None
     if (
@@ -591,11 +588,6 @@ def _table_writer(
                 else base_properties
             ),
         )
-        # This is a bit tricky, we need to add partition columns to the table schema
-        #  and these need transforms
-        # We can base them on the partition dimensions, but optionally we can allow users
-        #  to pass these as metadata to the asset
-        # TODO: add updates and deletes
         if partition_dimensions is not None:
             IcebergTableSpecUpdater(
                 partition_mapping=PartitionMapper(
@@ -618,9 +610,6 @@ def _table_writer(
     else:
         row_filter = iceberg_table.ALWAYS_TRUE
 
-    # TODO: use some sort of retry mechanism here
-    #  See: https://github.com/apache/iceberg-python/pull/330
-    #  See: https://github.com/apache/iceberg-python/issues/269
     _overwrite_table_with_retries(
         table=table,
         df=data,
@@ -643,7 +632,7 @@ def _overwrite_table_with_retries(
     """Overwrites an iceberg table and retries on failure
 
     NB: This will be added in PyIceberg 0.8.0 or 0.9.0. This implementation is based
-        on TODO TODO TODO
+        on https://github.com/apache/iceberg-python/issues/269 and https://github.com/apache/iceberg-python/pull/330
 
     Args:
         table (table.Table): Iceberg table
@@ -765,7 +754,7 @@ def partition_dimensions_to_filters(
                 raise ValueError(
                     f"Table is not partitioned by field '{field.name}' with id '{field.field_id}'. Available partition fields: {partition_spec_fields}"
                 )
-        # NB: add timestamp tz type and time type
+        # TODO: add timestamp tz type and time type
         filter_: Union[E.BooleanExpression, List[E.BooleanExpression]]
         if isinstance(field.field_type, time_partition_dt_types):
             filter_ = _time_window_partition_filter(
@@ -798,8 +787,7 @@ def _table_reader(table_slice: TableSlice, catalog: CatalogTypes) -> table.DataS
         tuple(table_slice.columns) if table_slice.columns is not None else ("*",)
     )
     row_filter: E.BooleanExpression
-    # In practice, this is an empty list, not None. This screws up the type checker.
-    if len(table_slice.partition_dimensions) != 0:
+    if table_slice.partition_dimensions:
         row_filter = _get_row_filter(
             iceberg_table_schema=table.schema(),
             iceberg_partition_spec=table.spec(),
