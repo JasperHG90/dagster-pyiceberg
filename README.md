@@ -90,13 +90,6 @@ The following engines are currently implemented.
 
 ## To do
 
-- Add additional configuration options
-  + Partition update error or update DONE
-  + Sort ordering
-- Examples:
-  + Add cmd for running examples
-  + Remove retry policy since we have fn to overwrite with retries
-
 - Examples:
   + Use same examples as dagster-deltalake
   + Docstrings
@@ -107,3 +100,4 @@ The following engines are currently implemented.
 - Docs
 - Testing:
   + Try load test with multiple materializations at the same time
+- Add to community list of dagster
