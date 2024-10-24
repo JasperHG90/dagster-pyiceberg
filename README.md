@@ -97,3 +97,12 @@ The following engines are currently implemented.
 - Examples:
   + Add cmd for running examples
   + Remove retry policy since we have fn to overwrite with retries
+
+- Examples:
+  + Use same examples as dagster-deltalake
+  + Docstrings
+- Sort ordering (initial)
+- Polars + Duckdb packages
+- Push to PyPi
+- Versioning (check other community packages)
+- Docs
