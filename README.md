@@ -96,6 +96,8 @@ The following engines are currently implemented.
   + Docstrings
 - Polars + Duckdb packages
 - Versioning (check other community packages)
+- Templates for GH issues
+- Update GHA pipeline
 - Push to PyPi
 - Testing:
   + Try load test with multiple materializations at the same time
