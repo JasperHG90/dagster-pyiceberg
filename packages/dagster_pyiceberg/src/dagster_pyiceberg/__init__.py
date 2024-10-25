@@ -6,8 +6,11 @@ from dagster_pyiceberg.config import (
     IcebergRestCatalogConfig as IcebergRestCatalogConfig,
 )
 from dagster_pyiceberg.config import IcebergSqlCatalogConfig as IcebergSqlCatalogConfig
-from dagster_pyiceberg.handler import IcebergPyArrowTypeHandler
-from dagster_pyiceberg.io_manager import IcebergIOManager
+from dagster_pyiceberg.handler import (
+    IcebergPyArrowTypeHandler as IcebergPyArrowTypeHandler,
+)
+from dagster_pyiceberg.io_manager import IcebergIOManager as IcebergIOManager
+from dagster_pyiceberg.resource import PyIcebergTableResource as PyIcebergTableResource
 from dagster_pyiceberg.version import __version__
 
 
