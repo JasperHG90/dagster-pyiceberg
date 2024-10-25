@@ -2,14 +2,11 @@ from typing import Optional, Sequence, Type, Union
 
 import polars as pl
 import pyarrow as pa
-from dagster import InputContext
-from dagster._core.storage.db_io_manager import DbTypeHandler, TableSlice
+from dagster._core.storage.db_io_manager import DbTypeHandler
 from dagster_pyiceberg import IcebergIOManager
 from dagster_pyiceberg.handler import (
-    CatalogTypes,
     IcebergBaseArrowTypeHandler,
     IcebergPyArrowTypeHandler,
-    _table_reader,
 )
 from pyiceberg import table
 
@@ -31,14 +28,6 @@ class IcebergPolarsTypeHandler(IcebergBaseArrowTypeHandler[PolarsTypes]):
             obj.collect().to_arrow()
             if isinstance(obj, pl.LazyFrame)
             else obj.to_arrow()
-        )
-
-    def load_input(
-        self, context: InputContext, table_slice: TableSlice, connection: CatalogTypes
-    ) -> PolarsTypes:
-        return self.from_arrow(
-            _table_reader(table_slice=table_slice, catalog=connection),
-            context.dagster_type.typing_type,
         )
 
     @property
