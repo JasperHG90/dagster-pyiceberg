@@ -59,6 +59,23 @@ class _IcebergTableIOManagerResourceConfig(TypedDict):
     schema_update_mode: SchemaUpdateMode
 
 
+def connect_to_catalog(
+    name: str,
+    config: _IcebergMetastoreCatalogConfig,
+) -> CatalogTypes:
+    """Connect to the iceberg catalog."""
+
+    if "sql" in config:
+        catalog = SqlCatalog(name=name, **config["sql"]["properties"])
+    elif "rest" in config:
+        catalog = RestCatalog(name=name, **config["rest"]["properties"])
+    else:
+        raise NotImplementedError(
+            f"Catalog type '{next(iter(config.keys()))}' not implemented"
+        )
+    return catalog
+
+
 class IcebergDbClient(DbClient):
 
     @staticmethod
@@ -93,19 +110,9 @@ class IcebergDbClient(DbClient):
         resource_config = cast(
             _IcebergTableIOManagerResourceConfig, context.resource_config
         )
-        config = resource_config["config"]
-        name = resource_config["name"]
-
-        if "sql" in config:
-            catalog = SqlCatalog(name=name, **config["sql"]["properties"])
-        elif "rest" in config:
-            catalog = RestCatalog(name=name, **config["rest"]["properties"])
-        else:
-            raise NotImplementedError(
-                f"Catalog type '{next(iter(config.keys()))}' not implemented"
-            )
-
-        yield catalog
+        yield connect_to_catalog(
+            name=resource_config["name"], config=resource_config["config"]
+        )
 
 
 class IcebergIOManager(ConfigurableIOManagerFactory):
