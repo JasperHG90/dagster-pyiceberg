@@ -69,6 +69,19 @@ def hourly_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
 
 @asset(
     key_prefix=["my_schema"],
+    partitions_def=HourlyPartitionsDefinition(start_date=dt.datetime(2022, 1, 1, 0)),
+    config_schema={"value": str},
+    metadata={"partition_expr": "partition"},
+)
+def hourly_partitioned_lazy(context: AssetExecutionContext) -> pl.LazyFrame:
+    partition = dt.datetime.strptime(context.partition_key, "%Y-%m-%d-%H:%M")
+    value = context.op_execution_context.op_config["value"]
+
+    return pl.from_dict({"partition": [partition], "value": [value], "b": [1]}).lazy()
+
+
+@asset(
+    key_prefix=["my_schema"],
     partitions_def=DailyPartitionsDefinition(start_date="2022-01-01"),
     config_schema={"value": str},
     metadata={"partition_expr": "partition"},
@@ -78,6 +91,19 @@ def daily_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
     value = context.op_execution_context.op_config["value"]
 
     return pl.from_dict({"partition": [partition], "value": [value], "b": [1]})
+
+
+@asset(
+    key_prefix=["my_schema"],
+    partitions_def=DailyPartitionsDefinition(start_date="2022-01-01"),
+    config_schema={"value": str},
+    metadata={"partition_expr": "partition"},
+)
+def daily_partitioned_lazy(context: AssetExecutionContext) -> pl.LazyFrame:
+    partition = dt.datetime.strptime(context.partition_key, "%Y-%m-%d").date()
+    value = context.op_execution_context.op_config["value"]
+
+    return pl.from_dict({"partition": [partition], "value": [value], "b": [1]}).lazy()
 
 
 @asset(
@@ -125,23 +151,35 @@ def test_iceberg_pandas_io_manager_with_assets(
         assert out_dt["a"].to_pylist() == [2, 3, 4]
 
 
+@pytest.mark.parametrize("lazy", [False, True])
 def test_iceberg_io_manager_with_daily_partitioned_assets(
-    tmp_path: Path, sql_catalog: SqlCatalog, io_manager: IcebergPolarsIOManager
+    lazy: bool,
+    tmp_path: Path,
+    sql_catalog: SqlCatalog,
+    io_manager: IcebergPolarsIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
     for date in ["2022-01-01", "2022-01-02", "2022-01-03"]:
         res = materialize(
-            [daily_partitioned],
+            [daily_partitioned_lazy if lazy else daily_partitioned],
             partition_key=date,
             resources=resource_defs,
             run_config={
-                "ops": {"my_schema__daily_partitioned": {"config": {"value": "1"}}}
+                "ops": {
+                    (
+                        "my_schema__daily_partitioned_lazy"
+                        if lazy
+                        else "my_schema__daily_partitioned"
+                    ): {"config": {"value": "1"}}
+                }
             },
         )
         assert res.success
 
-    table = sql_catalog.load_table("dagster.daily_partitioned")
+    table = sql_catalog.load_table(
+        "dagster.daily_partitioned_lazy" if lazy else "dagster.daily_partitioned"
+    )
     assert len(table.spec().fields) == 1
     assert table.spec().fields[0].name == "partition"
 
@@ -153,23 +191,35 @@ def test_iceberg_io_manager_with_daily_partitioned_assets(
     ]
 
 
+@pytest.mark.parametrize("lazy", [False, True])
 def test_iceberg_io_manager_with_hourly_partitioned_assets(
-    tmp_path: Path, sql_catalog: SqlCatalog, io_manager: IcebergPolarsIOManager
+    lazy: bool,
+    tmp_path: Path,
+    sql_catalog: SqlCatalog,
+    io_manager: IcebergPolarsIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
     for date in ["2022-01-01-01:00", "2022-01-01-02:00", "2022-01-01-03:00"]:
         res = materialize(
-            [hourly_partitioned],
+            [hourly_partitioned_lazy if lazy else hourly_partitioned],
             partition_key=date,
             resources=resource_defs,
             run_config={
-                "ops": {"my_schema__hourly_partitioned": {"config": {"value": "1"}}}
+                "ops": {
+                    (
+                        "my_schema__hourly_partitioned_lazy"
+                        if lazy
+                        else "my_schema__hourly_partitioned"
+                    ): {"config": {"value": "1"}}
+                }
             },
         )
         assert res.success
 
-    table = sql_catalog.load_table("dagster.hourly_partitioned")
+    table = sql_catalog.load_table(
+        "dagster.hourly_partitioned_lazy" if lazy else "dagster.hourly_partitioned"
+    )
     assert len(table.spec().fields) == 1
     assert table.spec().fields[0].name == "partition"
 
