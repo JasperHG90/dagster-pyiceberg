@@ -2,7 +2,6 @@ import datetime as dt
 from pathlib import Path
 
 import polars as pl
-import pyarrow as pa
 import pytest
 from dagster import (
     AssetExecutionContext,
@@ -52,7 +51,7 @@ def b_df() -> pl.DataFrame:
 
 @asset(key_prefix=["my_schema"])
 def b_plus_one(b_df: pl.DataFrame) -> pl.DataFrame:
-    return b_df.with_columns(a=[2, 3, 4])
+    return b_df.with_columns(a=pl.Series([2, 3, 4]))
 
 
 @asset(
@@ -61,11 +60,11 @@ def b_plus_one(b_df: pl.DataFrame) -> pl.DataFrame:
     config_schema={"value": str},
     metadata={"partition_expr": "partition"},
 )
-def hourly_partitioned(context: AssetExecutionContext) -> pa.Table:
+def hourly_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
     partition = dt.datetime.strptime(context.partition_key, "%Y-%m-%d-%H:%M")
     value = context.op_execution_context.op_config["value"]
 
-    return pa.Table.from_pydict({"partition": [partition], "value": [value], "b": [1]})
+    return pl.from_dict({"partition": [partition], "value": [value], "b": [1]})
 
 
 @asset(
@@ -74,11 +73,11 @@ def hourly_partitioned(context: AssetExecutionContext) -> pa.Table:
     config_schema={"value": str},
     metadata={"partition_expr": "partition"},
 )
-def daily_partitioned(context: AssetExecutionContext) -> pa.Table:
+def daily_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
     partition = dt.datetime.strptime(context.partition_key, "%Y-%m-%d").date()
     value = context.op_execution_context.op_config["value"]
 
-    return pa.Table.from_pydict({"partition": [partition], "value": [value], "b": [1]})
+    return pl.from_dict({"partition": [partition], "value": [value], "b": [1]})
 
 
 @asset(
@@ -97,13 +96,13 @@ def daily_partitioned(context: AssetExecutionContext) -> pa.Table:
         }
     },
 )
-def multi_partitioned(context: AssetExecutionContext) -> pa.Table:
+def multi_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
 
     category, date = context.partition_key.split("|")
     date_parsed = dt.datetime.strptime(date, "%Y-%m-%d").date()
     value = context.op_execution_context.op_config["value"]
 
-    return pa.Table.from_pydict(
+    return pl.from_dict(
         {"date": [date_parsed], "value": [value], "b": [1], "category": [category]}
     )
 
@@ -152,30 +151,6 @@ def test_iceberg_io_manager_with_daily_partitioned_assets(
         dt.date(2022, 1, 2),
         dt.date(2022, 1, 1),
     ]
-
-
-# def test_iceberg_io_manager_fails_on_schema_update(tmp_path, sql_catalog, io_manager):
-#     resource_defs = {"io_manager": io_manager}
-
-#     for date in ["2022-01-01", "2022-01-02", "2022-01-03"]:
-#         res = materialize(
-#             [daily_partitioned],
-#             partition_key=date,
-#             resources=resource_defs,
-#             run_config={
-#                 "ops": {"my_schema__daily_partitioned": {"config": {"value": "1"}}}
-#             },
-#         )
-#         assert res.success
-
-#     res = materialize(
-#         [daily_partitioned_schema_update],
-#         partition_key="2022-01-01-00:00",
-#         resources=resource_defs,
-#         run_config={
-#             "ops": {"my_schema__daily_partitioned": {"config": {"value": "1"}}}
-#         },
-#     )
 
 
 def test_iceberg_io_manager_with_hourly_partitioned_assets(
