@@ -13,6 +13,7 @@ resolution-markers = [
 members = [
     "dagster-pyiceberg",
     "dagster-pyiceberg-pandas",
+    "dagster-pyiceberg-polars",
     "dagster-pyiceberg-project",
 ]
 
@@ -469,6 +470,21 @@ requires-dist = [
 ]
 
 [[package]]
+name = "dagster-pyiceberg-polars"
+version = "0.0.0"
+source = { editable = "packages/dagster_pyiceberg_polars" }
+dependencies = [
+    { name = "dagster-pyiceberg" },
+    { name = "polars" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "dagster-pyiceberg", editable = "packages/dagster_pyiceberg" },
+    { name = "polars", specifier = ">=1.11.0" },
+]
+
+[[package]]
 name = "dagster-pyiceberg-project"
 version = "0.0.0"
 source = { virtual = "." }
@@ -477,6 +493,7 @@ source = { virtual = "." }
 dev = [
     { name = "dagster-pyiceberg" },
     { name = "dagster-pyiceberg-pandas" },
+    { name = "dagster-pyiceberg-polars" },
     { name = "ipykernel" },
     { name = "pre-commit" },
     { name = "pyright" },
@@ -490,6 +507,7 @@ dev = [
 dev = [
     { name = "dagster-pyiceberg", editable = "packages/dagster_pyiceberg" },
     { name = "dagster-pyiceberg-pandas", editable = "packages/dagster_pyiceberg_pandas" },
+    { name = "dagster-pyiceberg-polars", editable = "packages/dagster_pyiceberg_polars" },
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "pre-commit", specifier = ">=3.8.0" },
     { name = "pyright", specifier = ">=1.1.385" },
@@ -1373,6 +1391,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/96/2d/02d4312c973c6050a18b314a5ad0b3210edb65a906f868e31c111dede4a6/pluggy-1.5.0.tar.gz", hash = "sha256:2cffa88e94fdc978c4c574f15f9e59b7f4201d439195c3715ca9e2486f1d0cf1", size = 67955 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/5f/e351af9a41f866ac3f1fac4ca0613908d9a41741cfcf2228f4ad853b697d/pluggy-1.5.0-py3-none-any.whl", hash = "sha256:44e1ad92c8ca002de6377e165f3e0f1be63266ab4d554740532335b9d75ea669", size = 20556 },
+]
+
+[[package]]
+name = "polars"
+version = "1.11.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/42/88/4b06b7636f80575b9286781d12e263514a21108ba00e0f8b209478fa2a04/polars-1.11.0.tar.gz", hash = "sha256:4fbdd772b5f4538eb9f5ae4f3256290dba1f6c6b9d5226aed918801ed51089f4", size = 4076185 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/74/fa/185cf232322e6e1b0b07ef92914853f60b067b16bfae5e9f4ebfc752a3d2/polars-1.11.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:d20152fc29b83ffa4ca7d92b056866b1755dda346a3841106d9b361ccc96d94b", size = 32847858 },
+    { url = "https://files.pythonhosted.org/packages/9c/dc/fda904586956236da0e26da51ed4f09487aa42f51634b8df6477f08ee7d5/polars-1.11.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:fd48e8f607ae42f49abf4491e67fb1ad7d85157cb0a45a164fc4d1760d67e8ef", size = 28813631 },
+    { url = "https://files.pythonhosted.org/packages/94/25/7eaafa7320e5bdb88f7f793a08ab0a877309eef1a4537351e362cbd1dcba/polars-1.11.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1293f826e5469626d2a4da5e66afb0b46c6f8cb43d16e301d99aa5b911518c34", size = 34046798 },
+    { url = "https://files.pythonhosted.org/packages/47/03/374d9c4e6176ba4af5aa95ff002f3b5e41aff86da6037332b5107b74b5df/polars-1.11.0-cp39-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:0c41c79fc7e2159a0d8fb69a3d0d26c402846d10fe6ff772b2591766e39dfac4", size = 30410176 },
+    { url = "https://files.pythonhosted.org/packages/28/6b/0420d9a29e303b43be581ec70025329d84bd536ccef1a7907c81b8e352f6/polars-1.11.0-cp39-abi3-win_amd64.whl", hash = "sha256:a361d50ab5b0a6387bfe07a8a755bad7e61ba3d03381e4d1e343f49f6f0eb893", size = 33713325 },
 ]
 
 [[package]]
