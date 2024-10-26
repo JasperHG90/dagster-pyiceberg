@@ -60,8 +60,12 @@ def test_resource(
 
     @asset
     def read_table(pyiceberg_table: PyIcebergTableResource):
-        res = pyiceberg_table.load()
-        _ = res.scan().to_arrow()
+        table_ = pyiceberg_table.load().scan().to_arrow()
+        assert (
+            table_.schema.to_string()
+            == "timestamp: timestamp[us]\ncategory: large_string\nvalue: double"
+        )
+        assert table_.shape == (1440, 3)
 
     materialize(
         [read_table],
