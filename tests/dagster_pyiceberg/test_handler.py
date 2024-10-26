@@ -73,7 +73,32 @@ def table_slice_with_selected_columns() -> TableSlice:
     )
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="module", autouse=True)
+def create_catalog_table(catalog: SqlCatalog, namespace: str, schema: pa.Schema):
+    catalog.create_table(f"{namespace}.data", schema=schema)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def create_catalog_table_partitioned(
+    catalog: SqlCatalog, namespace: str, schema: pa.Schema
+):
+    partitioned_table = catalog.create_table(
+        f"{namespace}.data_partitioned", schema=schema
+    )
+    with partitioned_table.update_spec() as update:
+        update.add_field(
+            source_column_name="timestamp",
+            transform=transforms.HourTransform(),
+            partition_field_name="timestamp",
+        )
+        update.add_field(
+            source_column_name="category",
+            transform=transforms.IdentityTransform(),
+            partition_field_name="category",
+        )
+
+
+@pytest.fixture(scope="module", autouse=True)
 def create_catalog_table_partitioned_update(
     catalog: SqlCatalog, namespace: str, schema: pa.Schema
 ):
@@ -93,8 +118,35 @@ def create_catalog_table_partitioned_update(
         )
 
 
+@pytest.fixture(scope="module", autouse=True)
+def append_data_to_table(
+    catalog: SqlCatalog, create_catalog_table, namespace: str, data: pa.Table
+):
+    catalog.load_table(f"{namespace}.data").append(data)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def append_data_to_partitioned_table(
+    catalog: SqlCatalog,
+    create_catalog_table_partitioned,
+    namespace: str,
+    data: pa.Table,
+):
+    catalog.load_table(f"{namespace}.data_partitioned").append(data)
+
+
 @pytest.fixture(scope="module")
-def add_data_to_table(
+def table(catalog: SqlCatalog, namespace: str) -> iceberg_table.Table:
+    catalog.load_table(f"{namespace}.data")
+
+
+@pytest.fixture(scope="module")
+def table_partitioned(catalog: SqlCatalog, namespace: str) -> iceberg_table.Table:
+    return catalog.load_table(f"{namespace}.data_partitioned")
+
+
+@pytest.fixture(scope="module")
+def add_data_to_updated_table(
     catalog: SqlCatalog,
     create_catalog_table_partitioned_update,
     namespace: str,
