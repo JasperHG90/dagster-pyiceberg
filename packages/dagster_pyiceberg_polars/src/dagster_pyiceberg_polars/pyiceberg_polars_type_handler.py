@@ -17,7 +17,7 @@ class IcebergPolarsTypeHandler(IcebergBaseArrowTypeHandler[PolarsTypes]):
     def from_arrow(
         self, obj: table.DataScan, target_type: Type[PolarsTypes]
     ) -> PolarsTypes:
-        return (
+        return (  # type: ignore
             pl.from_arrow(obj.to_arrow())
             if target_type == pl.DataFrame
             else pl.from_arrow(obj.to_arrow_batch_reader())
