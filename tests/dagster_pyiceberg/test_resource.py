@@ -38,7 +38,7 @@ def append_data_to_table(iceberg_table: Table, data: pa.Table):
 
 
 @pytest.fixture(scope="module")
-def resource(
+def pyiceberg_table_resource(
     catalog_name: str,
     namespace: str,
     table_name: str,
@@ -53,7 +53,7 @@ def resource(
 
 
 def test_resource(
-    resource: PyIcebergTableResource,
+    pyiceberg_table_resource: PyIcebergTableResource,
     data: pa.Table,
 ):
     data = data
@@ -69,7 +69,7 @@ def test_resource(
 
     materialize(
         [read_table],
-        resources={"pyiceberg_table": resource},
+        resources={"pyiceberg_table": pyiceberg_table_resource},
     )
 
 
