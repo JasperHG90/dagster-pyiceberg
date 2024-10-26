@@ -1,5 +1,6 @@
 import datetime as dt
 import random
+from typing import Dict
 
 import pyarrow as pa
 import pytest
@@ -12,14 +13,24 @@ def warehouse_path(tmp_path_factory) -> str:
     return str(dir_.resolve())
 
 
+@pytest.fixture(scope="session")
+def catalog_config_properties(warehouse_path: str) -> Dict[str, str]:
+    return {
+        "uri": f"sqlite:///{str(warehouse_path)}/pyiceberg_catalog.db",
+        "warehouse": f"file://{str(warehouse_path)}",
+    }
+
+
+@pytest.fixture(scope="session")
+def catalog_name() -> str:
+    return "default"
+
+
 @pytest.fixture(scope="session", autouse=True)
-def catalog(warehouse_path: str) -> SqlCatalog:
+def catalog(catalog_name: str, catalog_config_properties: Dict[str, str]) -> SqlCatalog:
     return SqlCatalog(
-        "default",
-        **{
-            "uri": f"sqlite:///{warehouse_path}/pyiceberg_catalog.db",
-            "warehouse": f"file://{warehouse_path}",
-        },
+        catalog_name,
+        **catalog_config_properties,
     )
 
 
@@ -47,5 +58,5 @@ def data() -> pa.Table:
 
 
 @pytest.fixture(scope="session")
-def schema(data: pa.Table) -> pa.Schema:
+def data_schema(data: pa.Table) -> pa.Schema:
     return data.schema

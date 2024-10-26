@@ -1,52 +1,58 @@
+from typing import Dict
+
 import pyarrow as pa
 import pytest
 from dagster import asset, materialize
 from dagster_pyiceberg import IcebergSqlCatalogConfig, PyIcebergTableResource
 from pyiceberg.catalog.sql import SqlCatalog
+from pyiceberg.table import Table
 
 
-@pytest.fixture(scope="function")
-def resource(tmp_path) -> PyIcebergTableResource:
-    return PyIcebergTableResource(
-        name="default",
-        config=IcebergSqlCatalogConfig(
-            properties={
-                "uri": f"sqlite:///{str(tmp_path)}/pyiceberg_catalog.db",
-                "warehouse": f"file://{str(tmp_path)}",
-            }
-        ),
-        schema="resource",
-        table="data",
-    )
+@pytest.fixture(scope="module")
+def table_name() -> str:
+    return "resource_data"
 
 
-@pytest.fixture(autouse=True)
-def sql_catalog_resource(resource: PyIcebergTableResource):
-    return SqlCatalog(
-        name="default",
-        **resource.config.properties,  # NB: must match name in IO manager
-    )
+@pytest.fixture(scope="module")
+def table_identifier(namespace: str, table_name: str) -> str:
+    return f"{namespace}.{table_name}"
 
 
-@pytest.fixture(autouse=True)
-def create_schema_resource(
-    sql_catalog_resource: SqlCatalog, resource: PyIcebergTableResource
-):
-    sql_catalog_resource.create_namespace("resource")
-
-
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def create_catalog_table_resource(
-    sql_catalog_resource: SqlCatalog, create_schema_resource, data: pa.Table
+    catalog: SqlCatalog, table_identifier: str, data_schema: pa.Schema
 ):
-    sql_catalog_resource.create_table("resource.data", data.schema)
-    table_ = sql_catalog_resource.load_table("resource.data")
-    table_.append(data)
+    catalog.create_table(table_identifier, data_schema)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def iceberg_table(
+    create_catalog_table_resource, catalog: SqlCatalog, table_identifier: str
+) -> Table:
+    return catalog.load_table(table_identifier)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def append_data_to_table(iceberg_table: Table, data: pa.Table):
+    iceberg_table.append(df=data)
+
+
+@pytest.fixture(scope="module")
+def resource(
+    catalog_name: str,
+    namespace: str,
+    table_name: str,
+    catalog_config_properties: Dict[str, str],
+) -> PyIcebergTableResource:
+    return PyIcebergTableResource(
+        name=catalog_name,
+        config=IcebergSqlCatalogConfig(properties=catalog_config_properties),
+        schema=namespace,
+        table=table_name,
+    )
 
 
 def test_resource(
-    tmp_path,
-    create_catalog_table_resource,
     resource: PyIcebergTableResource,
     data: pa.Table,
 ):
