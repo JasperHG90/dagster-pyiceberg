@@ -16,14 +16,6 @@ from dagster_pyiceberg import IcebergPyarrowIOManager, IcebergSqlCatalogConfig
 from pyiceberg.catalog.sql import SqlCatalog
 
 
-@pytest.fixture(scope="module", autouse=True)
-def sql_catalog(catalog_name: str, catalog_config_properties: Dict[str, str]):
-    return SqlCatalog(
-        name=catalog_name,
-        **catalog_config_properties,  # NB: must match name in IO manager
-    )
-
-
 @pytest.fixture
 def io_manager(
     catalog_name: str, namespace: str, catalog_config_properties: Dict[str, str]
@@ -141,7 +133,7 @@ def multi_partitioned(context: AssetExecutionContext) -> pa.Table:
 def test_iceberg_io_manager_with_assets(
     asset_b_df_table_identifier: str,
     asset_b_plus_one_table_identifier: str,
-    sql_catalog: SqlCatalog,
+    catalog: SqlCatalog,
     io_manager: IcebergPyarrowIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
@@ -150,18 +142,18 @@ def test_iceberg_io_manager_with_assets(
         res = materialize([b_df, b_plus_one], resources=resource_defs)
         assert res.success
 
-        table = sql_catalog.load_table(asset_b_df_table_identifier)
+        table = catalog.load_table(asset_b_df_table_identifier)
         out_df = table.scan().to_arrow()
         assert out_df["a"].to_pylist() == [1, 2, 3]
 
-        dt = sql_catalog.load_table(asset_b_plus_one_table_identifier)
+        dt = catalog.load_table(asset_b_plus_one_table_identifier)
         out_dt = dt.scan().to_arrow()
         assert out_dt["a"].to_pylist() == [2, 3, 4]
 
 
 def test_iceberg_io_manager_with_daily_partitioned_assets(
     asset_daily_partitioned_table_identifier: str,
-    sql_catalog: SqlCatalog,
+    catalog: SqlCatalog,
     io_manager: IcebergPyarrowIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
@@ -177,7 +169,7 @@ def test_iceberg_io_manager_with_daily_partitioned_assets(
         )
         assert res.success
 
-    table = sql_catalog.load_table(asset_daily_partitioned_table_identifier)
+    table = catalog.load_table(asset_daily_partitioned_table_identifier)
     assert len(table.spec().fields) == 1
     assert table.spec().fields[0].name == "partition"
 
@@ -191,7 +183,7 @@ def test_iceberg_io_manager_with_daily_partitioned_assets(
 
 def test_iceberg_io_manager_with_hourly_partitioned_assets(
     asset_hourly_partitioned_table_identifier: str,
-    sql_catalog: SqlCatalog,
+    catalog: SqlCatalog,
     io_manager: IcebergPyarrowIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
@@ -207,7 +199,7 @@ def test_iceberg_io_manager_with_hourly_partitioned_assets(
         )
         assert res.success
 
-    table = sql_catalog.load_table(asset_hourly_partitioned_table_identifier)
+    table = catalog.load_table(asset_hourly_partitioned_table_identifier)
     assert len(table.spec().fields) == 1
     assert table.spec().fields[0].name == "partition"
 
@@ -221,7 +213,7 @@ def test_iceberg_io_manager_with_hourly_partitioned_assets(
 
 def test_iceberg_io_manager_with_multipartitioned_assets(
     asset_multi_partitioned_table_identifier: str,
-    sql_catalog: SqlCatalog,
+    catalog: SqlCatalog,
     io_manager: IcebergPyarrowIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
@@ -244,7 +236,7 @@ def test_iceberg_io_manager_with_multipartitioned_assets(
         )
         assert res.success
 
-    table = sql_catalog.load_table(asset_multi_partitioned_table_identifier)
+    table = catalog.load_table(asset_multi_partitioned_table_identifier)
     assert len(table.spec().fields) == 2
     assert [f.name for f in table.spec().fields] == ["category", "date"]
 
