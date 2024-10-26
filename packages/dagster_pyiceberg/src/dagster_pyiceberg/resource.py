@@ -12,7 +12,7 @@ from pyiceberg.table import Table
 SupportedCatalogConfigs = Union[IcebergRestCatalogConfig, IcebergSqlCatalogConfig]
 
 
-class PyIcebergTableResource(ConfigurableResource):
+class IcebergTableResource(ConfigurableResource):
     """Resource for interacting with a PyIceberg table.
 
     Examples:

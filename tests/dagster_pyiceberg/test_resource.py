@@ -3,7 +3,7 @@ from typing import Dict
 import pyarrow as pa
 import pytest
 from dagster import asset, materialize
-from dagster_pyiceberg import IcebergSqlCatalogConfig, PyIcebergTableResource
+from dagster_pyiceberg import IcebergSqlCatalogConfig, IcebergTableResource
 from pyiceberg.catalog.sql import SqlCatalog
 from pyiceberg.table import Table
 
@@ -43,8 +43,8 @@ def pyiceberg_table_resource(
     namespace: str,
     table_name: str,
     catalog_config_properties: Dict[str, str],
-) -> PyIcebergTableResource:
-    return PyIcebergTableResource(
+) -> IcebergTableResource:
+    return IcebergTableResource(
         name=catalog_name,
         config=IcebergSqlCatalogConfig(properties=catalog_config_properties),
         schema=namespace,
@@ -53,13 +53,13 @@ def pyiceberg_table_resource(
 
 
 def test_resource(
-    pyiceberg_table_resource: PyIcebergTableResource,
+    pyiceberg_table_resource: IcebergTableResource,
     data: pa.Table,
 ):
     data = data
 
     @asset
-    def read_table(pyiceberg_table: PyIcebergTableResource):
+    def read_table(pyiceberg_table: IcebergTableResource):
         table_ = pyiceberg_table.load().scan().to_arrow()
         assert (
             table_.schema.to_string()

@@ -10,7 +10,7 @@ from dagster_pyiceberg.handler import (
     IcebergPyArrowTypeHandler as IcebergPyArrowTypeHandler,
 )
 from dagster_pyiceberg.io_manager import IcebergIOManager as IcebergIOManager
-from dagster_pyiceberg.resource import PyIcebergTableResource as PyIcebergTableResource
+from dagster_pyiceberg.resource import IcebergTableResource as IcebergTableResource
 from dagster_pyiceberg.version import __version__
 
 
