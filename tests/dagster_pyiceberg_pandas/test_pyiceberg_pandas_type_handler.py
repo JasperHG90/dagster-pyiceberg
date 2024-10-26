@@ -1,5 +1,5 @@
 import datetime as dt
-from pathlib import Path
+from typing import Dict
 
 import pandas as pd
 import pyarrow as pa
@@ -19,30 +19,40 @@ from pyiceberg.catalog.sql import SqlCatalog
 
 
 @pytest.fixture
-def io_manager(tmp_path: Path) -> IcebergPandasIOManager:
+def io_manager(
+    catalog_name: str, namespace: str, catalog_config_properties: Dict[str, str]
+) -> IcebergPandasIOManager:
     return IcebergPandasIOManager(
-        name="test",
-        config=IcebergSqlCatalogConfig(
-            properties={
-                "uri": f"sqlite:///{str(tmp_path)}/pyiceberg_catalog.db",
-                "warehouse": f"file://{str(tmp_path)}",
-            }
-        ),
-        schema="dagster",
+        name=catalog_name,
+        config=IcebergSqlCatalogConfig(properties=catalog_config_properties),
+        schema=namespace,
         partition_spec_update_mode="error",
     )
 
 
-@pytest.fixture
-def sql_catalog(io_manager: IcebergPandasIOManager):
-    return SqlCatalog(
-        name="test", **io_manager.config.properties  # NB: must match name in IO manager
-    )
+@pytest.fixture(scope="module")
+def asset_b_df_table_identifier(namespace: str) -> str:
+    return f"{namespace}.b_df"
 
 
-@pytest.fixture(autouse=True)
-def create_schema(sql_catalog: SqlCatalog, io_manager: IcebergPandasIOManager):
-    sql_catalog.create_namespace("dagster")
+@pytest.fixture(scope="module")
+def asset_b_plus_one_table_identifier(namespace: str) -> str:
+    return f"{namespace}.b_plus_one"
+
+
+@pytest.fixture(scope="module")
+def asset_hourly_partitioned_table_identifier(namespace: str) -> str:
+    return f"{namespace}.hourly_partitioned"
+
+
+@pytest.fixture(scope="module")
+def asset_daily_partitioned_table_identifier(namespace: str) -> str:
+    return f"{namespace}.daily_partitioned"
+
+
+@pytest.fixture(scope="module")
+def asset_multi_partitioned_table_identifier(namespace: str) -> str:
+    return f"{namespace}.multi_partitioned"
 
 
 @asset(key_prefix=["my_schema"])
@@ -109,7 +119,10 @@ def multi_partitioned(context: AssetExecutionContext) -> pa.Table:
 
 
 def test_iceberg_pandas_io_manager_with_assets(
-    tmp_path: Path, sql_catalog: SqlCatalog, io_manager: IcebergPandasIOManager
+    asset_b_df_table_identifier: str,
+    asset_b_plus_one_table_identifier: str,
+    catalog: SqlCatalog,
+    io_manager: IcebergPandasIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -117,17 +130,19 @@ def test_iceberg_pandas_io_manager_with_assets(
         res = materialize([b_df, b_plus_one], resources=resource_defs)
         assert res.success
 
-        table = sql_catalog.load_table("dagster.b_df")
+        table = catalog.load_table(asset_b_df_table_identifier)
         out_df = table.scan().to_arrow()
         assert out_df["a"].to_pylist() == [1, 2, 3]
 
-        dt = sql_catalog.load_table("dagster.b_plus_one")
+        dt = catalog.load_table(asset_b_plus_one_table_identifier)
         out_dt = dt.scan().to_arrow()
         assert out_dt["a"].to_pylist() == [2, 3, 4]
 
 
 def test_iceberg_io_manager_with_daily_partitioned_assets(
-    tmp_path: Path, sql_catalog: SqlCatalog, io_manager: IcebergPandasIOManager
+    asset_daily_partitioned_table_identifier: str,
+    catalog: SqlCatalog,
+    io_manager: IcebergPandasIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -142,7 +157,7 @@ def test_iceberg_io_manager_with_daily_partitioned_assets(
         )
         assert res.success
 
-    table = sql_catalog.load_table("dagster.daily_partitioned")
+    table = catalog.load_table(asset_daily_partitioned_table_identifier)
     assert len(table.spec().fields) == 1
     assert table.spec().fields[0].name == "partition"
 
@@ -154,32 +169,10 @@ def test_iceberg_io_manager_with_daily_partitioned_assets(
     ]
 
 
-# def test_iceberg_io_manager_fails_on_schema_update(tmp_path, sql_catalog, io_manager):
-#     resource_defs = {"io_manager": io_manager}
-
-#     for date in ["2022-01-01", "2022-01-02", "2022-01-03"]:
-#         res = materialize(
-#             [daily_partitioned],
-#             partition_key=date,
-#             resources=resource_defs,
-#             run_config={
-#                 "ops": {"my_schema__daily_partitioned": {"config": {"value": "1"}}}
-#             },
-#         )
-#         assert res.success
-
-#     res = materialize(
-#         [daily_partitioned_schema_update],
-#         partition_key="2022-01-01-00:00",
-#         resources=resource_defs,
-#         run_config={
-#             "ops": {"my_schema__daily_partitioned": {"config": {"value": "1"}}}
-#         },
-#     )
-
-
 def test_iceberg_io_manager_with_hourly_partitioned_assets(
-    tmp_path: Path, sql_catalog: SqlCatalog, io_manager: IcebergPandasIOManager
+    asset_hourly_partitioned_table_identifier: str,
+    catalog: SqlCatalog,
+    io_manager: IcebergPandasIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -194,7 +187,7 @@ def test_iceberg_io_manager_with_hourly_partitioned_assets(
         )
         assert res.success
 
-    table = sql_catalog.load_table("dagster.hourly_partitioned")
+    table = catalog.load_table(asset_hourly_partitioned_table_identifier)
     assert len(table.spec().fields) == 1
     assert table.spec().fields[0].name == "partition"
 
@@ -207,7 +200,9 @@ def test_iceberg_io_manager_with_hourly_partitioned_assets(
 
 
 def test_iceberg_io_manager_with_multipartitioned_assets(
-    tmp_path, sql_catalog, io_manager
+    asset_multi_partitioned_table_identifier: str,
+    catalog: SqlCatalog,
+    io_manager: IcebergPandasIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
 
@@ -229,7 +224,7 @@ def test_iceberg_io_manager_with_multipartitioned_assets(
         )
         assert res.success
 
-    table = sql_catalog.load_table("dagster.multi_partitioned")
+    table = catalog.load_table(asset_multi_partitioned_table_identifier)
     assert len(table.spec().fields) == 2
     assert [f.name for f in table.spec().fields] == ["category", "date"]
 

@@ -90,20 +90,6 @@ def daily_partitioned(context: AssetExecutionContext) -> pa.Table:
 
 
 @asset(
-    name="daily_partitioned",
-    key_prefix=["my_schema"],
-    partitions_def=HourlyPartitionsDefinition(start_date="2022-01-01-00:00"),
-    config_schema={"value": str},
-    metadata={"partition_expr": "partition"},
-)
-def daily_partitioned_schema_update(context: AssetExecutionContext) -> pa.Table:
-    partition = dt.datetime.strptime(context.partition_key, "%Y-%m-%d-%H:%M")
-    value = context.op_execution_context.op_config["value"]
-
-    return pa.Table.from_pydict({"partition": [partition], "value": [value], "b": [1]})
-
-
-@asset(
     key_prefix=["my_schema"],
     partitions_def=MultiPartitionsDefinition(
         partitions_defs={
