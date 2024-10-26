@@ -19,7 +19,7 @@ def table_identifier(namespace: str, table_name: str) -> str:
 
 
 @pytest.fixture(scope="module", autouse=True)
-def create_catalog_table_resource(
+def create_table_in_catalog(
     catalog: SqlCatalog, table_identifier: str, data_schema: pa.Schema
 ):
     catalog.create_table(table_identifier, data_schema)
@@ -27,7 +27,7 @@ def create_catalog_table_resource(
 
 @pytest.fixture(scope="module", autouse=True)
 def iceberg_table(
-    create_catalog_table_resource, catalog: SqlCatalog, table_identifier: str
+    create_table_in_catalog, catalog: SqlCatalog, table_identifier: str
 ) -> Table:
     return catalog.load_table(table_identifier)
 

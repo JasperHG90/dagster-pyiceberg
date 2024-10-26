@@ -73,88 +73,6 @@ def table_slice_with_selected_columns() -> TableSlice:
     )
 
 
-@pytest.fixture(scope="module", autouse=True)
-def create_catalog_table(catalog: SqlCatalog, namespace: str, schema: pa.Schema):
-    catalog.create_table(f"{namespace}.data", schema=schema)
-
-
-@pytest.fixture(scope="module", autouse=True)
-def create_catalog_table_partitioned(
-    catalog: SqlCatalog, namespace: str, schema: pa.Schema
-):
-    partitioned_table = catalog.create_table(
-        f"{namespace}.data_partitioned", schema=schema
-    )
-    with partitioned_table.update_spec() as update:
-        update.add_field(
-            source_column_name="timestamp",
-            transform=transforms.HourTransform(),
-            partition_field_name="timestamp",
-        )
-        update.add_field(
-            source_column_name="category",
-            transform=transforms.IdentityTransform(),
-            partition_field_name="category",
-        )
-
-
-@pytest.fixture(scope="module", autouse=True)
-def create_catalog_table_partitioned_update(
-    catalog: SqlCatalog, namespace: str, schema: pa.Schema
-):
-    partitioned_table = catalog.create_table(
-        f"{namespace}.data_partitioned_update", schema=schema
-    )
-    with partitioned_table.update_spec() as update:
-        update.add_field(
-            source_column_name="timestamp",
-            transform=transforms.HourTransform(),
-            partition_field_name="timestamp",
-        )
-        update.add_field(
-            source_column_name="category",
-            transform=transforms.IdentityTransform(),
-            partition_field_name="category",
-        )
-
-
-@pytest.fixture(scope="module", autouse=True)
-def append_data_to_table(
-    catalog: SqlCatalog, create_catalog_table, namespace: str, data: pa.Table
-):
-    catalog.load_table(f"{namespace}.data").append(data)
-
-
-@pytest.fixture(scope="module", autouse=True)
-def append_data_to_partitioned_table(
-    catalog: SqlCatalog,
-    create_catalog_table_partitioned,
-    namespace: str,
-    data: pa.Table,
-):
-    catalog.load_table(f"{namespace}.data_partitioned").append(data)
-
-
-@pytest.fixture(scope="module")
-def table(catalog: SqlCatalog, namespace: str) -> iceberg_table.Table:
-    catalog.load_table(f"{namespace}.data")
-
-
-@pytest.fixture(scope="module")
-def table_partitioned(catalog: SqlCatalog, namespace: str) -> iceberg_table.Table:
-    return catalog.load_table(f"{namespace}.data_partitioned")
-
-
-@pytest.fixture(scope="module")
-def add_data_to_updated_table(
-    catalog: SqlCatalog,
-    create_catalog_table_partitioned_update,
-    namespace: str,
-    data: pa.Table,
-):
-    catalog.load_table(f"{namespace}.data_partitioned_update").append(data)
-
-
 @pytest.fixture(scope="function")
 def iceberg_table_schema() -> iceberg_schema.Schema:
     return iceberg_schema.Schema(
@@ -169,6 +87,133 @@ def iceberg_table_schema() -> iceberg_schema.Schema:
             T.StringType(),
         ),
     )
+
+
+@pytest.fixture(scope="module")
+def table_name() -> str:
+    return "handler_data"
+
+
+@pytest.fixture(scope="module")
+def table_identifier(namespace: str, table_name: str) -> str:
+    return f"{namespace}.{table_name}"
+
+
+@pytest.fixture(scope="module")
+def table_partitioned_name() -> str:
+    return "handler_data_partitioned"
+
+
+@pytest.fixture(scope="module")
+def table_partitioned_identifier(namespace: str, table_partitioned_name: str) -> str:
+    return f"{namespace}.{table_partitioned_name}"
+
+
+@pytest.fixture(scope="module")
+def table_partitioned_update_name() -> str:
+    return "handler_data_partitioned_update"
+
+
+@pytest.fixture(scope="module")
+def table_partitioned_update_identifier(
+    namespace: str, table_partitioned_update_name: str
+) -> str:
+    return f"{namespace}.{table_partitioned_update_name}"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def create_table_in_catalog(
+    catalog: SqlCatalog, table_identifier: str, data_schema: pa.Schema
+):
+    catalog.create_table(table_identifier, schema=data_schema)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def create_partitioned_table_in_catalog(
+    catalog: SqlCatalog, table_partitioned_identifier: str, data_schema: pa.Schema
+):
+    partitioned_table = catalog.create_table(
+        table_partitioned_identifier, schema=data_schema
+    )
+    with partitioned_table.update_spec() as update:
+        update.add_field(
+            source_column_name="timestamp",
+            transform=transforms.HourTransform(),
+            partition_field_name="timestamp",
+        )
+        update.add_field(
+            source_column_name="category",
+            transform=transforms.IdentityTransform(),
+            partition_field_name="category",
+        )
+
+
+@pytest.fixture(scope="module", autouse=True)
+def create_partitioned_update_table_in_catalog(
+    catalog: SqlCatalog,
+    table_partitioned_update_identifier: str,
+    data_schema: pa.Schema,
+):
+    partitioned_update_table = catalog.create_table(
+        table_partitioned_update_identifier, schema=data_schema
+    )
+    with partitioned_update_table.update_spec() as update:
+        update.add_field(
+            source_column_name="timestamp",
+            transform=transforms.HourTransform(),
+            partition_field_name="timestamp",
+        )
+        update.add_field(
+            source_column_name="category",
+            transform=transforms.IdentityTransform(),
+            partition_field_name="category",
+        )
+
+
+@pytest.fixture(scope="module", autouse=True)
+def append_data_to_table(
+    create_table_in_catalog, catalog: SqlCatalog, table_identifier: str, data: pa.Table
+):
+    catalog.load_table(table_identifier).append(data)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def append_data_to_partitioned_table(
+    create_partitioned_table_in_catalog,
+    catalog: SqlCatalog,
+    table_partitioned_identifier: str,
+    data: pa.Table,
+):
+    catalog.load_table(table_partitioned_identifier).append(data)
+
+
+@pytest.fixture(scope="module")
+def append_data_to_partitioned_update_table(
+    create_partitioned_update_table_in_catalog,
+    catalog: SqlCatalog,
+    table_partitioned_update_identifier: str,
+    data: pa.Table,
+):
+    catalog.load_table(table_partitioned_update_identifier).append(data)
+
+
+@pytest.fixture(scope="module")
+def table(catalog: SqlCatalog, table_identifier: str) -> iceberg_table.Table:
+    catalog.load_table(table_identifier)
+
+
+@pytest.fixture(scope="module")
+def table_partitioned(
+    catalog: SqlCatalog, table_partitioned_identifier: str
+) -> iceberg_table.Table:
+    return catalog.load_table(table_partitioned_identifier)
+
+
+@pytest.fixture(scope="module")
+def table_partitioned_update(
+    catalog: SqlCatalog, table_partitioned_update_identifier: str
+) -> iceberg_table.Table:
+    return catalog.load_table(table_partitioned_update_identifier)
 
 
 def test_time_window_partition_filter(
@@ -193,9 +238,8 @@ def test_partition_filter(category_table_partition_dimension: TablePartitionDime
 def test_partition_filter_fails_with_multiple(
     category_table_partition_dimension_multiple: TablePartitionDimension,
 ):
-    category_table_partition_dimension.partitions = ["A", "B"]
     with pytest.raises(NotImplementedError):
-        handler._partition_filter(category_table_partition_dimension)
+        handler._partition_filter(category_table_partition_dimension_multiple)
 
 
 def test_partition_dimensions_to_filters(
