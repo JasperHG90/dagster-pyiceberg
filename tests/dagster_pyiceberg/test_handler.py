@@ -39,14 +39,31 @@ def category_table_partition_dimension_multiple() -> TablePartitionDimension:
     return TablePartitionDimension("category", ["A", "B"])
 
 
+@pytest.fixture(scope="module")
+def table_name() -> str:
+    return "handler_data"
+
+
+@pytest.fixture(scope="module")
+def table_partitioned_name() -> str:
+    return "handler_data_partitioned"
+
+
+@pytest.fixture(scope="module")
+def table_partitioned_update_name() -> str:
+    return "handler_data_partitioned_update"
+
+
 @pytest.fixture()
 def partitioned_table_slice(
     datetime_table_partition_dimension: TablePartitionDimension,
     category_table_partition_dimension: TablePartitionDimension,
+    table_partitioned_name: str,
+    namespace: str,
 ) -> TableSlice:
     return TableSlice(
-        table="data_partitioned",
-        schema="pytest",
+        table=table_partitioned_name,
+        schema=namespace,
         partition_dimensions=[
             datetime_table_partition_dimension,
             category_table_partition_dimension,
@@ -55,19 +72,19 @@ def partitioned_table_slice(
 
 
 @pytest.fixture()
-def table_slice() -> TableSlice:
+def table_slice(table_name: str, namespace: str) -> TableSlice:
     return TableSlice(
-        table="data",
-        schema="pytest",
+        table=table_name,
+        schema=namespace,
         partition_dimensions=[],
     )
 
 
 @pytest.fixture()
-def table_slice_with_selected_columns() -> TableSlice:
+def table_slice_with_selected_columns(table_name: str, namespace: str) -> TableSlice:
     return TableSlice(
-        table="data",
-        schema="pytest",
+        table=table_name,
+        schema=namespace,
         partition_dimensions=[],
         columns=["value"],
     )
@@ -90,28 +107,13 @@ def iceberg_table_schema() -> iceberg_schema.Schema:
 
 
 @pytest.fixture(scope="module")
-def table_name() -> str:
-    return "handler_data"
-
-
-@pytest.fixture(scope="module")
 def table_identifier(namespace: str, table_name: str) -> str:
     return f"{namespace}.{table_name}"
 
 
 @pytest.fixture(scope="module")
-def table_partitioned_name() -> str:
-    return "handler_data_partitioned"
-
-
-@pytest.fixture(scope="module")
 def table_partitioned_identifier(namespace: str, table_partitioned_name: str) -> str:
     return f"{namespace}.{table_partitioned_name}"
-
-
-@pytest.fixture(scope="module")
-def table_partitioned_update_name() -> str:
-    return "handler_data_partitioned_update"
 
 
 @pytest.fixture(scope="module")
@@ -330,11 +332,13 @@ def test_diff_to_transformation_fails():
         )
 
 
-def test_table_writer(catalog: SqlCatalog, data: pa.Table):
+def test_table_writer(namespace: str, catalog: SqlCatalog, data: pa.Table):
+    table_ = "handler_data_table_writer"
+    identifier_ = f"{namespace}.{table_}"
     handler._table_writer(
         table_slice=TableSlice(
-            table="data_table_writer",
-            schema="pytest",
+            table=table_,
+            schema=namespace,
             # In assets that are not partitioned, this value is not None but an empty list.
             #  bit confusing since the type is optional and default value is None
             partition_dimensions=[],
@@ -345,8 +349,8 @@ def test_table_writer(catalog: SqlCatalog, data: pa.Table):
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
     )
-    assert catalog.table_exists("pytest.data_table_writer")
-    table = catalog.load_table("pytest.data_table_writer")
+    assert catalog.table_exists(identifier_)
+    table = catalog.load_table(identifier_)
     assert table.properties["dagster_run_id"] == "hfkghdgsh467374828"
     assert table.properties["created_by"] == "dagster"
     assert (
@@ -359,17 +363,19 @@ def test_table_writer(catalog: SqlCatalog, data: pa.Table):
     )
 
 
-def test_table_writer_partitioned(catalog: SqlCatalog, data: pa.Table):
+def test_table_writer_partitioned(namespace: str, catalog: SqlCatalog, data: pa.Table):
     # Works similar to # https://docs.dagster.io/integrations/deltalake/reference#storing-multi-partitioned-assets
     # Need to subset the data.
+    table_ = "handler_data_table_writer_partitioned"
+    identifier_ = f"{namespace}.{table_}"
     data = data.filter(
         (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
         & (pc.field("timestamp") < dt.datetime(2023, 1, 1, 1))
     )
     handler._table_writer(
         table_slice=TableSlice(
-            table="data_table_writer_partitioned",
-            schema="pytest",
+            table=table_,
+            schema=namespace,
             partition_dimensions=[
                 TablePartitionDimension(
                     "timestamp",
@@ -383,15 +389,19 @@ def test_table_writer_partitioned(catalog: SqlCatalog, data: pa.Table):
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
     )
-    table = catalog.load_table("pytest.data_table_writer_partitioned")
+    table = catalog.load_table(identifier_)
     partition_field_names = [f.name for f in table.spec().fields]
     assert partition_field_names == ["timestamp"]
     assert len(table.scan().to_arrow().to_pydict()["value"]) == 60
 
 
-def test_table_writer_multi_partitioned(catalog: SqlCatalog, data: pa.Table):
+def test_table_writer_multi_partitioned(
+    namespace: str, catalog: SqlCatalog, data: pa.Table
+):
     # Works similar to # https://docs.dagster.io/integrations/deltalake/reference#storing-multi-partitioned-assets
     # Need to subset the data.
+    table_ = "handler_data_table_writer_multi_partitioned"
+    identifier_ = f"{namespace}.{table_}"
     data = data.filter(
         (pc.field("category") == "A")
         & (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
@@ -399,8 +409,8 @@ def test_table_writer_multi_partitioned(catalog: SqlCatalog, data: pa.Table):
     )
     handler._table_writer(
         table_slice=TableSlice(
-            table="data_table_writer_multi_partitioned",
-            schema="pytest",
+            table=table_,
+            schema=namespace,
             partition_dimensions=[
                 TablePartitionDimension(
                     "timestamp",
@@ -418,15 +428,19 @@ def test_table_writer_multi_partitioned(catalog: SqlCatalog, data: pa.Table):
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
     )
-    table = catalog.load_table("pytest.data_table_writer_multi_partitioned")
+    table = catalog.load_table(identifier_)
     partition_field_names = [f.name for f in table.spec().fields]
     assert partition_field_names == ["timestamp", "category"]
     assert len(table.scan().to_arrow().to_pydict()["value"]) == 23
 
 
-def test_table_writer_multi_partitioned_update(catalog: SqlCatalog, data: pa.Table):
+def test_table_writer_multi_partitioned_update(
+    namespace: str, catalog: SqlCatalog, data: pa.Table
+):
     # Works similar to # https://docs.dagster.io/integrations/deltalake/reference#storing-multi-partitioned-assets
     # Need to subset the data.
+    table_ = "handler_data_table_writer_multi_partitioned_update"
+    identifier_ = f"{namespace}.{table_}"
     data = data.filter(
         (pc.field("category") == "A")
         & (pc.field("timestamp") >= dt.datetime(2023, 1, 1, 0))
@@ -436,8 +450,8 @@ def test_table_writer_multi_partitioned_update(catalog: SqlCatalog, data: pa.Tab
     data = pa.Table.from_pydict(data)
     handler._table_writer(
         table_slice=TableSlice(
-            table="data_multi_partitioned_update",
-            schema="pytest",
+            table=table_,
+            schema=namespace,
             partition_dimensions=[
                 TablePartitionDimension(
                     "timestamp",
@@ -455,7 +469,7 @@ def test_table_writer_multi_partitioned_update(catalog: SqlCatalog, data: pa.Tab
         partition_spec_update_mode="update",
         dagster_run_id="hfkghdgsh467374828",
     )
-    table = catalog.load_table("pytest.data_multi_partitioned_update")
+    table = catalog.load_table(identifier_)
     data_out = (
         table.scan(
             E.And(
@@ -473,12 +487,14 @@ def test_table_writer_multi_partitioned_update(catalog: SqlCatalog, data: pa.Tab
 
 
 def test_table_writer_multi_partitioned_update_partition_spec_change(
-    warehouse_path: str, catalog: SqlCatalog, data: pa.Table
+    namespace: str, warehouse_path: str, catalog: SqlCatalog, data: pa.Table
 ):
+    table_ = "handler_data_table_writer_multi_partitioned_update_partition_spec_change"
+    identifier_ = f"{namespace}.{table_}"
     handler._table_writer(
         table_slice=TableSlice(
-            table="data_multi_partitioned_update_partition_spec_change",
-            schema="pytest",
+            table=table_,
+            schema=namespace,
             partition_dimensions=[
                 TablePartitionDimension(
                     "timestamp",
@@ -499,8 +515,8 @@ def test_table_writer_multi_partitioned_update_partition_spec_change(
     )
     handler._table_writer(
         table_slice=TableSlice(
-            table="data_multi_partitioned_update_partition_spec_change",
-            schema="pytest",
+            table=table_,
+            schema=namespace,
             partition_dimensions=[
                 TablePartitionDimension(
                     "timestamp",
@@ -520,33 +536,27 @@ def test_table_writer_multi_partitioned_update_partition_spec_change(
     )
     path_to_dwh = (
         plb.Path(warehouse_path)
-        / "pytest.db"
-        / "data_multi_partitioned_update_partition_spec_change"
+        / f"{namespace}.db"
+        / table_
         / "data"
         / "timestamp=2023-01-01-00"
     )
     categories = sorted([p.name for p in path_to_dwh.glob("*") if p.is_dir()])
     assert categories == ["category=A", "category=B", "category=C"]
     assert (
-        len(
-            catalog.load_table(
-                "pytest.data_multi_partitioned_update_partition_spec_change"
-            )
-            .scan()
-            .to_arrow()
-            .to_pydict()["value"]
-        )
+        len(catalog.load_table(identifier_).scan().to_arrow().to_pydict()["value"])
         == 1440
     )
 
 
 def test_table_writer_multi_partitioned_update_partition_spec_error(
-    warehouse_path: str, catalog: SqlCatalog, data: pa.Table
+    namespace: str, catalog: SqlCatalog, data: pa.Table
 ):
+    table_ = "handler_data_multi_partitioned_update_partition_spec_error"
     handler._table_writer(
         table_slice=TableSlice(
-            table="data_multi_partitioned_update_partition_spec_error",
-            schema="pytest",
+            table=table_,
+            schema=namespace,
             partition_dimensions=[
                 TablePartitionDimension(
                     "timestamp",
@@ -570,8 +580,8 @@ def test_table_writer_multi_partitioned_update_partition_spec_error(
     ):
         handler._table_writer(
             table_slice=TableSlice(
-                table="data_multi_partitioned_update_partition_spec_error",
-                schema="pytest",
+                table=table_,
+                schema=namespace,
                 partition_dimensions=[
                     TablePartitionDimension(
                         "timestamp",
@@ -594,12 +604,14 @@ def test_table_writer_multi_partitioned_update_partition_spec_error(
 
 
 def test_iceberg_table_writer_with_table_properties(
-    catalog: SqlCatalog, data: pa.Table
+    namespace: str, catalog: SqlCatalog, data: pa.Table
 ):
+    table_ = "handler_data_iceberg_table_writer_with_table_properties"
+    identifier_ = f"{namespace}.{table_}"
     handler._table_writer(
         table_slice=TableSlice(
-            table="data_iceberg_table_writer_with_table_properties",
-            schema="pytest",
+            table=table_,
+            schema=namespace,
             partition_dimensions=[],
         ),
         data=data,
@@ -612,22 +624,24 @@ def test_iceberg_table_writer_with_table_properties(
         },
         dagster_run_id="hfkghdgsh467374828",
     )
-    table = catalog.load_table("pytest.data_iceberg_table_writer_with_table_properties")
+    table = catalog.load_table(identifier_)
     assert table.properties["write.parquet.page-size-bytes"] == "2048"
     assert table.properties["write.parquet.page-row-limit"] == "10000"
 
 
 def test_iceberg_to_dagster_partition_mapper_new_fields(
+    namespace: str,
     iceberg_table_schema: iceberg_schema.Schema,
 ):
+    table_ = "handler_data_multi_partitioned_update_schema_change"
     spec = iceberg_partitioning.PartitionSpec(
         iceberg_partitioning.PartitionField(
             1, 1, name="timestamp", transform=transforms.HourTransform()
         ),
     )
     table_slice = TableSlice(
-        table="data_multi_partitioned_update_schema_change",
-        schema="pytest",
+        table=table_,
+        schema=namespace,
         partition_dimensions=[
             TablePartitionDimension(
                 "timestamp",
@@ -649,16 +663,18 @@ def test_iceberg_to_dagster_partition_mapper_new_fields(
 
 
 def test_iceberg_to_dagster_partition_mapper_changed_time_partition(
+    namespace: str,
     iceberg_table_schema: iceberg_schema.Schema,
 ):
+    table_ = "handler_data_multi_partitioned_update_schema_change"
     spec = iceberg_partitioning.PartitionSpec(
         iceberg_partitioning.PartitionField(
             1, 1, name="timestamp", transform=transforms.HourTransform()
         ),
     )
     table_slice = TableSlice(
-        table="data_multi_partitioned_update_schema_change",
-        schema="pytest",
+        table=table_,
+        schema=namespace,
         partition_dimensions=[
             # Changed from hourly to daily
             TablePartitionDimension(
@@ -677,8 +693,10 @@ def test_iceberg_to_dagster_partition_mapper_changed_time_partition(
 
 
 def test_iceberg_to_dagster_partition_mapper_deleted(
+    namespace: str,
     iceberg_table_schema: iceberg_schema.Schema,
 ):
+    table_ = "handler_data_multi_partitioned_update_schema_change"
     spec = iceberg_partitioning.PartitionSpec(
         iceberg_partitioning.PartitionField(
             1, 1, name="timestamp", transform=transforms.HourTransform()
@@ -688,8 +706,8 @@ def test_iceberg_to_dagster_partition_mapper_deleted(
         ),
     )
     table_slice = TableSlice(
-        table="data_multi_partitioned_update_schema_change",
-        schema="pytest",
+        table=table_,
+        schema=namespace,
         partition_dimensions=[],
     )
     deleted_partitions = handler.PartitionMapper(
@@ -703,8 +721,10 @@ def test_iceberg_to_dagster_partition_mapper_deleted(
 
 
 def test_iceberg_table_spec_updater_delete_field(
+    namespace: str,
     iceberg_table_schema: iceberg_schema.Schema,
 ):
+    table_ = "handler_spec_updater_delete"
     spec = iceberg_partitioning.PartitionSpec(
         iceberg_partitioning.PartitionField(
             1, 1, name="timestamp", transform=transforms.HourTransform()
@@ -714,8 +734,8 @@ def test_iceberg_table_spec_updater_delete_field(
         ),
     )
     table_slice = TableSlice(
-        table="spec_updater_delete",
-        schema="pytest",
+        table=table_,
+        schema=namespace,
         partition_dimensions=[
             TablePartitionDimension(
                 "timestamp",
@@ -740,16 +760,18 @@ def test_iceberg_table_spec_updater_delete_field(
 
 
 def test_iceberg_table_spec_updater_update_field(
+    namespace: str,
     iceberg_table_schema: iceberg_schema.Schema,
 ):
+    table_ = "handler_spec_updater_update"
     spec = iceberg_partitioning.PartitionSpec(
         iceberg_partitioning.PartitionField(
             1, 1, name="timestamp", transform=transforms.HourTransform()
         ),
     )
     table_slice = TableSlice(
-        table="spec_updater_update",
-        schema="pytest",
+        table=table_,
+        schema=namespace,
         partition_dimensions=[
             TablePartitionDimension(
                 "timestamp",
@@ -779,12 +801,14 @@ def test_iceberg_table_spec_updater_update_field(
 
 
 def test_iceberg_table_spec_updater_add_field(
+    namespace: str,
     iceberg_table_schema: iceberg_schema.Schema,
 ):
+    table_ = "handler_spec_updater_add"
     spec = iceberg_partitioning.PartitionSpec()
     table_slice = TableSlice(
-        table="spec_updater_add",
-        schema="pytest",
+        table=table_,
+        schema=namespace,
         partition_dimensions=[
             TablePartitionDimension(
                 "timestamp",
@@ -811,12 +835,14 @@ def test_iceberg_table_spec_updater_add_field(
 
 
 def test_iceberg_table_spec_updater_fails_with_error_update_mode(
+    namespace: str,
     iceberg_table_schema: iceberg_schema.Schema,
 ):
+    table_ = "handler_spec_updater_fails"
     spec = iceberg_partitioning.PartitionSpec()
     table_slice = TableSlice(
-        table="spec_updater_fails",
-        schema="pytest",
+        table=table_,
+        schema=namespace,
         partition_dimensions=[
             TablePartitionDimension(
                 "timestamp",
