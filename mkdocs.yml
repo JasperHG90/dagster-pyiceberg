@@ -1,6 +1,13 @@
 site_name: dagster-pyiceberg
 nav:
   - Home: index.md
+  - Installation: installation.md
+  - Quickstart: quickstart.md
+  - Reference: reference.md
+  - Developing: developing.md
+  - Examples:
+    - Pandas: examples/pandas.md
+    - Polars: examples/polars.md
 
 theme:
   name: "material"
