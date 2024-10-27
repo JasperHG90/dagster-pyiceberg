@@ -28,6 +28,7 @@ def io_manager(
     )
 
 
+# NB: iceberg table identifiers are namespace + asset names (see below)
 @pytest.fixture(scope="function")
 def asset_b_df_table_identifier(namespace: str) -> str:
     return f"{namespace}.b_df"
