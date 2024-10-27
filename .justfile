@@ -2,6 +2,7 @@ alias s := setup
 alias t := test
 alias c := typecheck
 alias p := pre_commit
+alias d := docs
 
 # Install python dependencies
 install:
@@ -24,3 +25,6 @@ test:
 
 typecheck:
   uv run pyright
+
+docs:
+  uv run mkdocs serve

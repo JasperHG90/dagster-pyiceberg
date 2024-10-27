@@ -81,6 +81,7 @@ The following engines are currently implemented.
 
 - arrow
 - pandas
+- polars
 
 ## Development
 
