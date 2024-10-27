@@ -28,27 +28,27 @@ def io_manager(
     )
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def asset_b_df_table_identifier(namespace: str) -> str:
     return f"{namespace}.b_df"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def asset_b_plus_one_table_identifier(namespace: str) -> str:
     return f"{namespace}.b_plus_one"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def asset_hourly_partitioned_table_identifier(namespace: str) -> str:
     return f"{namespace}.hourly_partitioned"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def asset_daily_partitioned_table_identifier(namespace: str) -> str:
     return f"{namespace}.daily_partitioned"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def asset_multi_partitioned_table_identifier(namespace: str) -> str:
     return f"{namespace}.multi_partitioned"
 

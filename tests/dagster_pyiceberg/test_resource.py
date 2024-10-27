@@ -13,31 +13,31 @@ def table_name() -> str:
     return "resource_data"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def table_identifier(namespace: str, table_name: str) -> str:
     return f"{namespace}.{table_name}"
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def create_table_in_catalog(
     catalog: SqlCatalog, table_identifier: str, data_schema: pa.Schema
 ):
     catalog.create_table(table_identifier, data_schema)
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def iceberg_table(
     create_table_in_catalog, catalog: SqlCatalog, table_identifier: str
 ) -> Table:
     return catalog.load_table(table_identifier)
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def append_data_to_table(iceberg_table: Table, data: pa.Table):
     iceberg_table.append(df=data)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def pyiceberg_table_resource(
     catalog_name: str,
     namespace: str,
