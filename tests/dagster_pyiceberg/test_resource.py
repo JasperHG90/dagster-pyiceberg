@@ -56,7 +56,6 @@ def test_resource(
     pyiceberg_table_resource: IcebergTableResource,
     data: pa.Table,
 ):
-    data = data
 
     @asset
     def read_table(pyiceberg_table: IcebergTableResource):
