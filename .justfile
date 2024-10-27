@@ -23,8 +23,10 @@ pre_commit:
 test:
   uv run pytest tests
 
+# Run pyright
 typecheck:
   uv run pyright
 
+# Serve docs locally
 docs:
   uv run mkdocs serve
