@@ -5,4 +5,4 @@ ENV MYPY_CACHE_DIR=$HOME/workspace/.cache/mypy
 ENV PRE_COMMIT_HOME=$HOME/workspace/.cache/pre-commit
 
 # The above dockerfile is built once a month and may not contain the latest version of uv
-RUN pipx install --force uv==0.4.12
+RUN pipx install --force uv==0.4.27

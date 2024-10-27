@@ -10,21 +10,7 @@ readme = "README.md"
 dependencies = []
 
 [tool.uv]
-dev-dependencies = [
-    # These are added as dev dependencies becuase they should be available
-    #  when developing the project.
-    "dagster_pyiceberg",
-    "dagster_pyiceberg_pandas",
-    "dagster_pyiceberg_polars",
-    # END WORKSPACE_PACKAGES
-    "pre-commit>=3.8.0",
-    "ipykernel>=6.29.5",
-    "pytest>=8.3.2",
-    "pyright>=1.1.385",
-    "pytest-coverage>=0.0",
-    "testcontainers[postgres]>=4.8.2",
-    "psycopg2-binary>=2.9.10",
-]
+default-groups = ["dev", "docs"]
 package = false
 
 [tool.uv.workspace]
@@ -86,3 +72,26 @@ include = ["packages"]
 pythonVersion = "3.11"
 venvPath = "."
 venv = ".venv"
+
+[dependency-groups]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-include-markdown-plugin>=7.0.0",
+    "mkdocs-material>=9.5.42",
+    "mkdocstrings>=0.26.2",
+]
+dev = [
+    # These are added as dev dependencies becuase they should be available
+    #  when developing the project.
+    "dagster_pyiceberg",
+    "dagster_pyiceberg_pandas",
+    "dagster_pyiceberg_polars",
+    # END WORKSPACE_PACKAGES
+    "pre-commit>=3.8.0",
+    "ipykernel>=6.29.5",
+    "pytest>=8.3.2",
+    "pyright>=1.1.385",
+    "pytest-coverage>=0.0",
+    "testcontainers[postgres]>=4.8.2",
+    "psycopg2-binary>=2.9.10",
+]
