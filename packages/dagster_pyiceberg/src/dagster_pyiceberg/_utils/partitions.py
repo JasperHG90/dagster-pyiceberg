@@ -310,12 +310,12 @@ def partition_dimensions_to_filters(
         # TODO: add timestamp tz type and time type
         filter_: Union[E.BooleanExpression, List[E.BooleanExpression]]
         if isinstance(field.field_type, time_partition_dt_types):
-            filter_ = _time_window_partition_filter(
+            filter_ = time_window_partition_filter(
                 table_partition=partition_dimension,
                 iceberg_partition_spec_field_type=field.field_type,
             )
         elif isinstance(field.field_type, partition_types):
-            filter_ = _partition_filter(table_partition=partition_dimension)
+            filter_ = partition_filter(table_partition=partition_dimension)
         else:
             raise ValueError(
                 f"Partitioning by field type '{str(field.field_type)}' not supported"
@@ -328,7 +328,7 @@ def partition_dimensions_to_filters(
     return partition_filters
 
 
-def _partition_filter(table_partition: TablePartitionDimension) -> E.BooleanExpression:
+def partition_filter(table_partition: TablePartitionDimension) -> E.BooleanExpression:
     partition = cast(Sequence[str], table_partition.partitions)
     if len(partition) > 1:
         raise NotImplementedError(
@@ -337,7 +337,7 @@ def _partition_filter(table_partition: TablePartitionDimension) -> E.BooleanExpr
     return E.EqualTo(table_partition.partition_expr, table_partition.partitions[0])  # type: ignore
 
 
-def _time_window_partition_filter(
+def time_window_partition_filter(
     table_partition: TablePartitionDimension,
     iceberg_partition_spec_field_type: Union[
         T.DateType, T.TimestampType, T.TimeType, T.TimestamptzType
