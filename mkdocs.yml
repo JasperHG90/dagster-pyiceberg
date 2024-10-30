@@ -12,6 +12,7 @@ nav:
   - Features: features.md
   - Reference: reference.md
   - Developing: development.md
+  #- "Code reference": code_reference.md
 
 theme:
   name: "material"
@@ -36,5 +37,9 @@ markdown_extensions:
 
 plugins:
 - search
-- mkdocstrings
+- mkdocstrings:
+    default_handler: python
+    handlers:
+      python:
+        paths: [packages/dagster_pyiceberg]
 - include-markdown

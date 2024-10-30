@@ -80,7 +80,7 @@ docs = [
     "mkdocs>=1.6.1",
     "mkdocs-include-markdown-plugin>=7.0.0",
     "mkdocs-material>=9.5.42",
-    "mkdocstrings>=0.26.2",
+    "mkdocstrings[python]>=0.26.2",
 ]
 dev = [
     # These are added as dev dependencies becuase they should be available
