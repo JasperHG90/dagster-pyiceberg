@@ -1,10 +1,46 @@
+import datetime as dt
+import random
+
 import pandas as pd
 from dagster import (
     DailyPartitionsDefinition,
+    Definitions,
     MultiPartitionsDefinition,
     StaticPartitionDefinition,
     asset,
 )
+from dagster_pyiceberg import IcebergPyarrowIOManager, IcebergSqlCatalogConfig
+
+CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/catalog.db"
+CATALOG_WAREHOUSE = "file:///home/vscode/workspace/.tmp/examples/warehouse"
+
+
+resources = {
+    "io_manager": IcebergPyarrowIOManager(
+        name="test",
+        config=IcebergSqlCatalogConfig(
+            properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
+        ),
+        schema="dagster",
+    )
+}
+
+
+def get_iris_data_for_date(partition: str) -> pd.DataFrame:
+    random.seed(876)
+    N = 1440
+    d = {
+        "timestamp": [dt.date.fromisoformat(partition)],
+        "species": [
+            random.choice(["Iris-setosa", "Iris-virginica", "Iris-versicolor"])
+            for _ in range(N)
+        ],
+        "sepal_length_cm": [random.uniform(0, 1) for _ in range(N)],
+        "sepal_width_cm": [random.uniform(0, 1) for _ in range(N)],
+        "petal_length_cm": [random.uniform(0, 1) for _ in range(N)],
+        "petal_width_cm": [random.uniform(0, 1) for _ in range(N)],
+    }
+    return pd.DataFrame.from_dict(d)
 
 
 @asset(
@@ -34,3 +70,6 @@ def iris_dataset_partitioned(context) -> pd.DataFrame:
 @asset
 def iris_cleaned(iris_dataset_partitioned: pd.DataFrame):
     return iris_dataset_partitioned.dropna().drop_duplicates()
+
+
+defs = Definitions(assets=[iris_dataset_partitioned, iris_cleaned], resources=resources)
