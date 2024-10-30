@@ -30,7 +30,7 @@ jobs:
       - name: 'Pyright type checks'
         uses: ./.github/workflows/templates/pyright_type_checks
         with:
-          uv_version: "0.4.12"
+          uv_version: "0.4.27"
           python_version: "3.11"
           pyright_version: "1.1.385"
   tests:
@@ -43,5 +43,5 @@ jobs:
         uses: ./.github/workflows/templates/tests
         with:
           python_version: "3.11"
-          uv_version: "0.4.12"
+          uv_version: "0.4.27"
           directory: "tests"
