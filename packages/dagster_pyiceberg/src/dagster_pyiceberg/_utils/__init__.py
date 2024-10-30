@@ -1,3 +1,3 @@
-from .schema import IcebergTableSchemaUpdater as IcebergTableSchemaUpdater
-from .schema import SchemaDiffer as SchemaDiffer
-from .transforms import diff_to_transformation as diff_to_transformation
+from dagster_pyiceberg._utils.io import CatalogTypes as CatalogTypes
+from dagster_pyiceberg._utils.io import table_reader as table_reader
+from dagster_pyiceberg._utils.io import table_writer as table_writer
