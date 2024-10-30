@@ -54,7 +54,6 @@ In the subsequent sections, we will outline how the I/O manager generates these 
 
     Like static partitioned assets, you can specify `partition_expr` metadata on the asset to tell the PyIceberg I/O manager which column contains the partition data:
 
-
     ```python title="docs/snippets/partitions_time.py" linenums="1"
     --8<-- "docs/snippets/partitions_time.py"
     ```
@@ -151,3 +150,17 @@ The PyIceberg I/O manager also supports storing and loading PyArrow and Polars D
 
 
 === "Polars DataFrames"
+
+---
+
+## Executing custom SQL commands with the PyIceberg resource
+
+In addition to the PyIceberg I/O manager, Dagster also provides a PyIceberg resource for executing custom SQL queries.
+
+```python title="docs/snippets/pyiceberg_resource.py" linenums="1"
+--8<-- "docs/snippets/pyiceberg_resource.py"
+```
+
+In this example, we attach the PyIceberg resource to the small_petals asset. In the body of the asset function, we use the get_client context manager method of the resource to get a bigquery.client.Client. We can use the client to execute a custom SQL query against the IRIS_DATA table created in Step 2: Create tables in PyIceberg of the Using Dagster with PyIceberg tutorial.
+
+For more information on the PyIceberg resource, see the PyIceberg resource API docs.
