@@ -1,13 +1,21 @@
 site_name: dagster-pyiceberg
+
+# Repository
+repo_name: JasperHG90/dagster-pyiceberg
+repo_url: https://github.com/JasperHG90/dagster-pyiceberg
+edit_uri: ""
+
 nav:
   - Home: index.md
   - Installation: installation.md
   - Quickstart: quickstart.md
+  - Features: features.md
   - Reference: reference.md
   - Developing: development.md
 
 theme:
   name: "material"
+  logo: assets/dagster-pyiceberg-logo-small.png
   features:
     - content.code.select
     - content.code.copy
