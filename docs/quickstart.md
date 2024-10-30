@@ -1,5 +1,9 @@
 # Quickstart
 
+!!! warning "Iceberg catalog"
+
+    PyIceberg requires a catalog backend. A SQLite catalog is used here for illustrative purposes. Do not use this in a production setting.
+
 ## Step 1: Defining the I/O manager
 
 To use dagster-pyiceberg as an I/O manager, you add it to your `Definition`:
@@ -28,8 +32,6 @@ defs = Definitions(
     resources=resources
 )
 ```
-
-> 💡 PyIceberg requires a catalog backend. A SQLite catalog is used here for illustrative purposes. Do not use this in a production setting.
 
 ## Step 2: Store a Dagster asset as a PyIceberg table
 
