@@ -30,70 +30,72 @@ The PyIceberg I/O manager facilitates the storage and retrieval of partitioned d
 
 In the subsequent sections, we will outline how the I/O manager generates these queries for various partition types.
 
-> For partitioning to function correctly, the partition dimension must correspond to one of the partition columns defined in the Iceberg table. Tables created through the I/O manager will be set up accordingly.
+!!! info "Partition dimensions"
 
-### Storing static partitioned assets
+    For partitioning to function correctly, the partition dimension must correspond to one of the partition columns defined in the Iceberg table. Tables created through the I/O manager will be set up accordingly.
 
-To save static partitioned assets in your Iceberg table, you need to set the `partition_expr` metadata on the asset. This informs the PyIceberg I/O manager which column holds the partition data:
+=== "Storing static partitioned assets"
 
-```python title="docs/snippets/partitions_static.py" linenums="1"
---8<-- "docs/snippets/partitions_static.py"
-```
+    To save static partitioned assets in your Iceberg table, you need to set the `partition_expr` metadata on the asset. This informs the PyIceberg I/O manager which column holds the partition data:
 
-Dagster uses the `partition_expr` metadata to create the necessary function parameters when retrieving the partition in the downstream asset. For static partitions, this is roughly equivalent to the following SQL query:
+    ```python title="docs/snippets/partitions_static.py" linenums="1"
+    --8<-- "docs/snippets/partitions_static.py"
+    ```
 
-```sql
-SELECT *
- WHERE [partition_expr] in ([selected partitions])
-```
+    Dagster uses the `partition_expr` metadata to create the necessary function parameters when retrieving the partition in the downstream asset. For static partitions, this is roughly equivalent to the following SQL query:
 
-A partition must be specified when materializing the above assets, as explained in the [Materializing partitioned assets](/concepts/partitions-schedules-sensors/partitioning-assets#materializing-partitioned-assets) documentation. For instance, the query used to materialize the `Iris-setosa` partition of the assets would be:
+    ```sql
+    SELECT *
+    WHERE [partition_expr] in ([selected partitions])
+    ```
 
-```sql
-SELECT *
- WHERE species = 'Iris-setosa'
-```
+    A partition must be specified when materializing the above assets, as explained in the [Materializing partitioned assets](/concepts/partitions-schedules-sensors/partitioning-assets#materializing-partitioned-assets) documentation. For instance, the query used to materialize the `Iris-setosa` partition of the assets would be:
 
-### Storing time-partitioned assets
+    ```sql
+    SELECT *
+    WHERE species = 'Iris-setosa'
+    ```
 
-Like static partitioned assets, you can specify `partition_expr` metadata on the asset to tell the PyIceberg I/O manager which column contains the partition data:
+=== "Storing time-partitioned assets"
+
+    Like static partitioned assets, you can specify `partition_expr` metadata on the asset to tell the PyIceberg I/O manager which column contains the partition data:
 
 
-```python title="docs/snippets/partitions_time.py" linenums="1"
---8<-- "docs/snippets/partitions_time.py"
-```
+    ```python title="docs/snippets/partitions_time.py" linenums="1"
+    --8<-- "docs/snippets/partitions_time.py"
+    ```
 
-Dagster uses the `partition_expr` metadata to craft the `SELECT` statement when loading the correct partition in the downstream asset. When loading a dynamic partition, the following statement is used:
+    Dagster uses the `partition_expr` metadata to craft the `SELECT` statement when loading the correct partition in the downstream asset. When loading a dynamic partition, the following statement is used:
 
-```sql
-SELECT *
- WHERE [partition_expr] = [partition_start]
-```
+    ```sql
+    SELECT *
+    WHERE [partition_expr] = [partition_start]
+    ```
 
-A partition must be selected when materializing the above assets, as described in the [Materializing partitioned assets](/concepts/partitions-schedules-sensors/partitioning-assets#materializing-partitioned-assets) documentation. The `[partition_start]` and `[partition_end]` bounds are of the form `YYYY-MM-DD HH:MM:SS`. In this example, the query when materializing the `2023-01-02` partition of the above assets would be:
+    A partition must be selected when materializing the above assets, as described in the [Materializing partitioned assets](/concepts/partitions-schedules-sensors/partitioning-assets#materializing-partitioned-assets) documentation. The `[partition_start]` and `[partition_end]` bounds are of the form `YYYY-MM-DD HH:MM:SS`. In this example, the query when materializing the `2023-01-02` partition of the above assets would be:
 
-```sql
-SELECT *
- WHERE time = '2023-01-02 00:00:00'
-```
+    ```sql
+    SELECT *
+    WHERE time = '2023-01-02 00:00:00'
+    ```
 
-### Storing multi-partitioned assets
+=== "Storing multi-partitioned assets"
 
-The PyIceberg I/O manager can also store data partitioned on multiple dimensions. To do this, specify the column for each partition as a dictionary of `partition_expr` metadata:
+    The PyIceberg I/O manager can also store data partitioned on multiple dimensions. To do this, specify the column for each partition as a dictionary of `partition_expr` metadata:
 
-```python title="docs/snippets/partitions_multiple.py" linenums="1"
---8<-- "docs/snippets/partitions_multiple.py"
-```
+    ```python title="docs/snippets/partitions_multiple.py" linenums="1"
+    --8<-- "docs/snippets/partitions_multiple.py"
+    ```
 
-Dagster uses the `partition_expr` metadata to craft the `SELECT` statement when loading the correct partition in a downstream asset. For multi-partitions, Dagster concatenates the `WHERE` statements described in the above sections to craft the correct `SELECT` statement.
+    Dagster uses the `partition_expr` metadata to craft the `SELECT` statement when loading the correct partition in a downstream asset. For multi-partitions, Dagster concatenates the `WHERE` statements described in the above sections to craft the correct `SELECT` statement.
 
-A partition must be selected when materializing the above assets, as described in the [Materializing partitioned assets](/concepts/partitions-schedules-sensors/partitioning-assets#materializing-partitioned-assets) documentation. For example, when materializing the `2023-01-02|Iris-setosa` partition of the above assets, the following query will be used:
+    A partition must be selected when materializing the above assets, as described in the [Materializing partitioned assets](/concepts/partitions-schedules-sensors/partitioning-assets#materializing-partitioned-assets) documentation. For example, when materializing the `2023-01-02|Iris-setosa` partition of the above assets, the following query will be used:
 
-```sql
-SELECT *
- WHERE species = 'Iris-setosa'
-   AND time = '2023-01-02 00:00:00'
-```
+    ```sql
+    SELECT *
+    WHERE species = 'Iris-setosa'
+      AND time = '2023-01-02 00:00:00'
+    ```
 
 ---
 
