@@ -1,26 +1,30 @@
-from dagster_gcp import BigQueryResource
+"""
+NB: This snippet assumes that an iceberg table called 'ingested_data' exists.
+"""
 
+import pandas as pd
 from dagster import Definitions, asset
+from dagster_pyiceberg import IcebergSqlCatalogConfig, IcebergTableResource
 
-# this example executes a query against the IRIS.IRIS_DATA table created in Step 2 of the
-# Using Dagster with BigQuery tutorial
+CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/catalog.db"
+CATALOG_WAREHOUSE = "file:///home/vscode/workspace/.tmp/examples/warehouse"
 
 
 @asset
-def small_petals(bigquery: BigQueryResource):
-    with bigquery.get_client() as client:
-        return client.query(
-            'SELECT * FROM IRIS.IRIS_DATA WHERE "petal_length_cm" < 1 AND'
-            ' "petal_width_cm" < 1',
-        ).result()
+def small_petals(iceberg: IcebergTableResource) -> pd.DataFrame:
+    return iceberg.load().scan().to_pandas()
 
 
 defs = Definitions(
     assets=[small_petals],
     resources={
-        "bigquery": BigQueryResource(
-            project="my-gcp-project",
-            location="us-east5",
+        "iceberg": IcebergTableResource(
+            name="test",
+            config=IcebergSqlCatalogConfig(
+                properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
+            ),
+            schema="dagster",
+            table="ingested_data",
         )
     },
 )

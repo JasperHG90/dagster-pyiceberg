@@ -1,13 +1,14 @@
 import pandas as pd
-from dagster import AssetIn, Definitions, StaticPartitionsDefinition, asset
-from dagster_pyiceberg import IcebergPyarrowIOManager, IcebergSqlCatalogConfig
+from dagster import Definitions, StaticPartitionsDefinition, asset
+from dagster_pyiceberg import IcebergSqlCatalogConfig
+from dagster_pyiceberg_pandas import IcebergPandasIOManager
 
 CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/catalog.db"
 CATALOG_WAREHOUSE = "file:///home/vscode/workspace/.tmp/examples/warehouse"
 
 
 resources = {
-    "io_manager": IcebergPyarrowIOManager(
+    "io_manager": IcebergPandasIOManager(
         name="test",
         config=IcebergSqlCatalogConfig(
             properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
