@@ -2,7 +2,7 @@ name: tests
 description: "Template that runs pytest"
 
 inputs:
-    path:
+    directory:
         description: "Path to tests."
         required: true
     uv_version:
