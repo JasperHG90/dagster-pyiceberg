@@ -2,12 +2,6 @@
 
 This reference page provides information for working with dagster-pyiceberg.
 
-- [Selecting specific columns in a downstream asset](#selecting-specific-columns-in-a-downstream-asset)
-- [Storing partitioned assets](#storing-partitioned-assets)
-- [Storing tables in multiple schemas](#storing-tables-in-multiple-schemas)
-- [Using the PyIceberg I/O manager with other I/O managers](#using-the-delta-lake-io-manager-with-other-io-managers)
-- [Storing and loading PyArrow Tables, or Pandas and Polars DataFrames in PyIceberg](#storing-and-loading-pyarrow-tables-or-polars-dataframes-in-delta-lake)
-
 ---
 
 ## Selecting specific columns in a downstream asset
