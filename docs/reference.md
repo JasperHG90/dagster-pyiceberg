@@ -143,17 +143,17 @@ In this example:
 
 The PyIceberg I/O manager also supports storing and loading PyArrow and Polars DataFrames.
 
-### Storing and loading PyArrow Tables with PyIceberg
+=== "PyArrow Tables"
 
-The `deltalake` package relies heavily on Apache Arrow for efficient data transfer, so PyArrow is natively supported.
+    The `deltalake` package relies heavily on Apache Arrow for efficient data transfer, so PyArrow is natively supported.
 
-You can use the `DeltaLakePyArrowIOManager` in a <PyObject object="Definitions" /> object as in [Step 1](/integrations/deltalake/using-deltalake-with-dagster#step-1-configure-the-delta-lake-io-manager) of the [Using Dagster with PyIceberg tutorial](/integrations/deltalake/using-deltalake-with-dagster).
+    You can use the `DeltaLakePyArrowIOManager` in a <PyObject object="Definitions" /> object as in [Step 1](/integrations/deltalake/using-deltalake-with-dagster#step-1-configure-the-delta-lake-io-manager) of the [Using Dagster with PyIceberg tutorial](/integrations/deltalake/using-deltalake-with-dagster).
 
-```python title="docs/snippets/io_manager_pyarrow.py" linenums="1"
---8<-- "docs/snippets/io_manager_pyarrow.py"
-```
+    ```python title="docs/snippets/io_manager_pyarrow.py" linenums="1"
+    --8<-- "docs/snippets/io_manager_pyarrow.py"
+    ```
 
-### Storing and loading Pandas Tables with PyIceberg
+=== "Pandas DataFrames"
 
 
-### Storing and loading Polars Tables with PyIceberg
+=== "Polars DataFrames"
