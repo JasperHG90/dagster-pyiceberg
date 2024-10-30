@@ -5,12 +5,12 @@ nav:
   - Quickstart: quickstart.md
   - Reference: reference.md
   - Developing: development.md
-  - Examples:
-    - Pandas: examples/pandas.md
-    - Polars: examples/polars.md
 
 theme:
   name: "material"
+  features:
+    - content.code.select
+    - content.code.copy
 
 markdown_extensions:
   - pymdownx.highlight:

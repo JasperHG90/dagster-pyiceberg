@@ -47,7 +47,9 @@ profile = "black"
 extend_skip = [".notebooks", ".nox", ".venv"]
 
 [tool.mypy]
-exclude = "^.notebooks/"
+exclude = [
+  '^docs/'
+]
 ignore_missing_imports = true
 explicit_package_bases = true
 

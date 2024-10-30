@@ -4,7 +4,7 @@
 
 To use dagster-pyiceberg as an I/O manager, you add it to your `Definition`:
 
-```python
+```py linenums="1"
 from dagster import Definitions
 from dagster_pyiceberg import IcebergPyarrowIOManager, IcebergSqlCatalogConfig
 
@@ -33,7 +33,7 @@ defs = Definitions(
 
 ## Step 2: Store a Dagster asset as a PyIceberg table
 
-```python
+```py linenums="1"
 import pandas as pd
 
 from dagster import asset
@@ -57,7 +57,7 @@ def iris_dataset() -> pd.DataFrame:
 
 Dagster and the I/O manager allow you to load the data stored in Iceberg tables into downstream assets:
 
-```python
+```py linenums="1"
 import pandas as pd
 
 from dagster import asset
