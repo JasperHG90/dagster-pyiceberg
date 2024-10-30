@@ -42,6 +42,6 @@ jobs:
       - name: 'tests'
         uses: ./.github/workflows/templates/tests
         with:
-          python_version: "3.11"
           uv_version: "0.4.27"
+          python_version: "3.11"
           directory: "tests"
