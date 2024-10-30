@@ -44,4 +44,4 @@ jobs:
         with:
           uv_version: "0.4.27"
           python_version: "3.11"
-          path: "tests"
+          directory: "tests"
