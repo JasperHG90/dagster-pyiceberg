@@ -2,7 +2,7 @@ from abc import abstractmethod
 from typing import Generic, Sequence, Type, TypeVar, Union, cast
 
 import pyarrow as pa
-from dagster import InputContext, OutputContext
+from dagster import InputContext, MetadataValue, OutputContext, TableColumn, TableSchema
 from dagster._core.storage.db_io_manager import DbTypeHandler, TableSlice
 from dagster_pyiceberg._utils import CatalogTypes, table_reader, table_writer
 from pyiceberg.table import DataScan
@@ -72,6 +72,22 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
                 context.partition_key if context.has_asset_partitions else None
             ),
             table_properties=table_properties_usr,
+        )
+
+        table_ = connection.load_table(f"{table_slice.schema}.{table_slice.table}")
+
+        context.add_output_metadata(
+            {
+                "table_columns": MetadataValue.table_schema(
+                    TableSchema(
+                        columns=[
+                            TableColumn(name=f["name"], type=str(f["type"]))
+                            for f in table_.schema().model_dump()["fields"]
+                        ]
+                    )
+                ),
+                **table_.current_snapshot().model_dump(),
+            }
         )
 
     def load_input(
