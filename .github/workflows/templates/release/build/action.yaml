@@ -1,0 +1,34 @@
+name: 'Build Python library'
+description: 'Builds python artifacts for release'
+
+inputs:
+  python_version:
+    description: 'Python version to use'
+    required: true
+    default: '3.8'
+  uv_version:
+    description: 'uv version to use'
+    required: true
+    default: 'latest'
+  path_to_packages:
+    description: 'Path to python packages'
+    required: true
+    default: 'packages'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: 'Get version'
+      id: version
+      uses: JasperHG90/git-version@v3
+    - name: 'Print version'
+      run: echo "Version is ${{ steps.version.outputs.version }}"
+      shell: bash
+    - name: 'Set python package version'
+      uses: ./.github/workflows/templates/release/utils/bump_version
+      with:
+        version: ${{ steps.version.outputs.version }}
+        root: ${{ inputs.path_to_packages }}
+        glob: '**/src/**/version.py,**/pyproject.toml'

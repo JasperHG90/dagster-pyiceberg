@@ -24,3 +24,6 @@ Documentation can be found [here](https://jasperhg90.github.io/dagster-pyiceberg
 - Testing:
   + Try load test with multiple materializations at the same time
 - Add to community list of dagster
+
+- set classifiers
+- nox for testing across versions

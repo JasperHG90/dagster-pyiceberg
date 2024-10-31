@@ -1,0 +1,19 @@
+name: 'Bump version'
+description: 'Recursively read files and set any __version__ to the specified version'
+inputs:
+  version:
+    description: 'Version to set'
+    required: true
+  root:
+    description: 'Path to root of project'
+    required: true
+  glob:
+    description: 'Glob pattern to search for files in which version strings should be replaced'
+    required: true
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.version }}
+    - ${{ inputs.root }}
+    - ${{ inputs.glob }}
