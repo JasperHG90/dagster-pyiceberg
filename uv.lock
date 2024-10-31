@@ -507,7 +507,7 @@ name = "dagster-pyiceberg-project"
 version = "0.0.0"
 source = { virtual = "." }
 
-[package.dependency-groups]
+[package.dev-dependencies]
 dev = [
     { name = "dagster-pyiceberg" },
     { name = "dagster-pyiceberg-pandas" },
@@ -529,7 +529,7 @@ docs = [
 
 [package.metadata]
 
-[package.metadata.dependency-groups]
+[package.metadata.requires-dev]
 dev = [
     { name = "dagster-pyiceberg", editable = "packages/dagster_pyiceberg" },
     { name = "dagster-pyiceberg-pandas", editable = "packages/dagster_pyiceberg_pandas" },
