@@ -38,7 +38,7 @@ jobs:
     needs: checks
     strategy:
       matrix:
-        python_version: ["3.9", "3.10", "3.11"]
+        python_version: ["3.9", "3.10", "3.11", "3.12"]
     steps:
       - name: checkout
         uses: actions/checkout@v4
