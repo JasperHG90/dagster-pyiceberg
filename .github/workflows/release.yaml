@@ -21,24 +21,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Build python packages
+        uses: ./.github/workflows/templates/release/build
         with:
-          python-version: ${{ inputs.python_version }}
-      - name: Install uv
-        uses: astral-sh/setup-uv@v2
-        with:
-          uv-version: ${{ inputs.uv_version }}
-      - name: Install dependencies
-        run: |
-          uv sync --only-group release
-        shell: bash
-      - name: Build release
-        run: |
-          uv run mkdocs build
-        shell: bash
-      - name: Upload artifact
-        id: deployment
-        uses: actions/upload-artifact@v2
-        with:
-          name: release
+          python_version: '3.11'
+          uv_version: '0.4.27'
+          path_to_packages: './packages'
