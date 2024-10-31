@@ -6,6 +6,7 @@ from dagster import InputContext, MetadataValue, OutputContext, TableColumn, Tab
 from dagster._core.storage.db_io_manager import DbTypeHandler, TableSlice
 from dagster_pyiceberg._utils import CatalogTypes, table_reader, table_writer
 from pyiceberg.table import DataScan
+from pyiceberg.table.snapshots import Snapshot
 
 U = TypeVar("U")
 
@@ -76,6 +77,8 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
 
         table_ = connection.load_table(f"{table_slice.schema}.{table_slice.table}")
 
+        current_snapshot = cast(Snapshot, table_.current_snapshot())
+
         context.add_output_metadata(
             {
                 "table_columns": MetadataValue.table_schema(
@@ -86,7 +89,7 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
                         ]
                     )
                 ),
-                **table_.current_snapshot().model_dump(),
+                **current_snapshot.model_dump(),
             }
         )
 
