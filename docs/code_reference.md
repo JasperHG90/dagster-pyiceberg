@@ -3,6 +3,8 @@ an **information-oriented** approach. Use it as a
 reference for the technical implementation of the
 `calculator` project code.
 
+::: dagster_pyiceberg
+
 ::: dagster_pyiceberg.io_manager
 
-::: dagster_pyiceberg.handler
+::: dagster_pyiceberg.resource
