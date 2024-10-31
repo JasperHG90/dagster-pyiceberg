@@ -3,8 +3,8 @@ from typing import Optional, Union, cast
 from dagster import ConfigurableResource
 from dagster_pyiceberg.config import IcebergRestCatalogConfig, IcebergSqlCatalogConfig
 from dagster_pyiceberg.io_manager import (
+    _connect_to_catalog,
     _IcebergMetastoreCatalogConfig,
-    connect_to_catalog,
 )
 from pydantic import Field
 from pyiceberg.table import Table
@@ -58,7 +58,7 @@ class IcebergTableResource(ConfigurableResource):
     def load(self) -> Table:
         config_ = self.config.model_dump()
         config_parsed = {config_["type"]: {"properties": config_["properties"]}}
-        catalog = connect_to_catalog(
+        catalog = _connect_to_catalog(
             name=self.name, config=cast(_IcebergMetastoreCatalogConfig, config_parsed)
         )
         return catalog.load_table(identifier="%s.%s" % (self.schema_, self.table))

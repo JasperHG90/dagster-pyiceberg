@@ -59,7 +59,7 @@ class _IcebergTableIOManagerResourceConfig(TypedDict):
     schema_update_mode: SchemaUpdateMode
 
 
-def connect_to_catalog(
+def _connect_to_catalog(
     name: str,
     config: _IcebergMetastoreCatalogConfig,
 ) -> CatalogTypes:
@@ -110,12 +110,68 @@ class IcebergDbClient(DbClient):
         resource_config = cast(
             _IcebergTableIOManagerResourceConfig, context.resource_config
         )
-        yield connect_to_catalog(
+        yield _connect_to_catalog(
             name=resource_config["name"], config=resource_config["config"]
         )
 
 
 class IcebergIOManager(ConfigurableIOManagerFactory):
+    """Base class for an IO manager definition that reads inputs from and writes outputs to Iceberg tables.
+
+    Examples:
+        .. code-block:: python
+
+            from dagster_pyiceberg import IcebergIOManager, IcebergSqlCatalogConfig
+            from dagster_pyiceberg_pandas import IcebergPandasTypeHandler
+            from dagster._core.storage.db_io_manager import DbTypeHandler
+
+            class MyIcebergLakeIOManager(IcebergIOManager):
+                @staticmethod
+                def type_handlers() -> Sequence[DbTypeHandler]:
+                    return [IcebergPandasTypeHandler()]
+
+            @asset(
+                key_prefix=["my_schema"]  # will be used as the schema (parent folder) in the iceberg catalog
+            )
+            def my_table() -> pd.DataFrame:  # the name of the asset will be the table name
+                ...
+
+            defs = Definitions(
+                assets=[my_table],
+                resources={"io_manager": MyIcebergLakeIOManager(
+                    name="my_iceberg_lake",
+                    config=IcebergSqlCatalogConfig(
+                        properties={"uri": <SQL-URI>, "warehouse": <WAREHOUSE-LOCATION>}
+                    ),
+                )},
+            )
+
+    If you do not provide a schema, Dagster will determine a schema based on the assets and ops using
+    the I/O Manager. For assets, the schema will be determined from the asset key, as in the above example.
+    For ops, the schema can be specified by including a "schema" entry in output metadata. If none
+    of these is provided, the schema will default to "public".
+
+    .. code-block:: python
+
+        @op(
+            out={"my_table": Out(metadata={"schema": "my_schema"})}
+        )
+        def make_my_table() -> pd.DataFrame:
+            ...
+
+    To only use specific columns of a table as input to a downstream op or asset, add the metadata "columns" to the
+    In or AssetIn.
+
+    .. code-block:: python
+
+        @asset(
+            ins={"my_table": AssetIn("my_table", metadata={"columns": ["a"]})}
+        )
+        def my_table_a(my_table: pd.DataFrame):
+            # my_table will just contain the data from column "a"
+            ...
+
+    """
 
     name: str = Field(description="The name of the iceberg catalog.")
     config: Union[IcebergSqlCatalogConfig, IcebergRestCatalogConfig] = Field(
