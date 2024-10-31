@@ -12,7 +12,6 @@ dependencies = [
     "dagster>=1.8.2",
     "pendulum>=3.0.0",
     "tenacity>=8.5.0",
-    "cachetools>=5.5.0",
 ]
 maintainers = [
   {name="Jasper Ginn", email="jasperginn@gmail.com"}
@@ -28,6 +27,9 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12"
 ]
+
+[tool.uv.sources]
+pyiceberg = { git = "https://github.com/apache/iceberg-python", rev = "0cebec4" }
 
 [build-system]
 requires = ["hatchling"]

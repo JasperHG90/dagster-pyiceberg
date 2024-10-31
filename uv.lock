@@ -447,7 +447,6 @@ name = "dagster-pyiceberg"
 version = "0.0.0"
 source = { editable = "packages/dagster_pyiceberg" }
 dependencies = [
-    { name = "cachetools" },
     { name = "dagster" },
     { name = "pendulum" },
     { name = "pyiceberg", extra = ["pyarrow"] },
@@ -456,10 +455,9 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cachetools", specifier = ">=5.5.0" },
     { name = "dagster", specifier = ">=1.8.2" },
     { name = "pendulum", specifier = ">=3.0.0" },
-    { name = "pyiceberg", extras = ["pyarrow"], specifier = ">=0.7.1" },
+    { name = "pyiceberg", extras = ["pyarrow"], git = "https://github.com/apache/iceberg-python?rev=0cebec4" },
     { name = "tenacity", specifier = ">=8.5.0" },
 ]
 
@@ -1986,8 +1984,9 @@ wheels = [
 [[package]]
 name = "pyiceberg"
 version = "0.7.1"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/apache/iceberg-python?rev=0cebec4#0cebec48833f75eeca02b1a965112615b1cbc1c8" }
 dependencies = [
+    { name = "cachetools" },
     { name = "click" },
     { name = "fsspec" },
     { name = "mmh3" },
@@ -1999,31 +1998,9 @@ dependencies = [
     { name = "strictyaml" },
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0e/a0/7e371eafe0f1f757fc4f9e071caf4fd5c1dbf195bd3523fd1b63da1a78ee/pyiceberg-0.7.1.tar.gz", hash = "sha256:2fd8f9717b02673cb9cabe7aed82fc38933241b2bd15cbdc1ff7371e70317a47", size = 568827 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/df/f4c4b507845b74d333235d13dd086994e83507dab8ee79cf5092f2a06a7e/pyiceberg-0.7.1-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:9e0cc837d41e100df81f1f5e580a89668aade694d8c616941d6e11c3a27e49cb", size = 534974 },
-    { url = "https://files.pythonhosted.org/packages/9a/80/cd8f215f09c1b1d9a57c39ba873f58b226a36e960ba3df86588e495ac043/pyiceberg-0.7.1-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:71c053c2d484505d1beabd7d5167fe2e835ca865f52ad91ef4852f0d91fa4a25", size = 536578 },
-    { url = "https://files.pythonhosted.org/packages/d7/78/3fd8bea871e20710c859ebc998ba42fc028d6e773c329cbb34e567c7e8ba/pyiceberg-0.7.1-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:0549ab1843bc07037a7d212c2db527ff1755f5d8f80420907952b5b080eb3663", size = 530698 },
-    { url = "https://files.pythonhosted.org/packages/a4/a6/821dcd2e4ce67aea7ff6e845d934ed8f6df90726c1bbffae2879cda26bfc/pyiceberg-0.7.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ec4a8000f0bb6ce6ec47f3368ca99f3191e9105662eeef7be2fbb493363cba96", size = 1003347 },
-    { url = "https://files.pythonhosted.org/packages/78/cf/9f67f202a6e84444b25254350042d524dc3fd96598af36524eb1b308f58e/pyiceberg-0.7.1-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:0ef6636d3cf370b796529f9a8dbd84e892a2151f0310a8015b9a1e702647ad90", size = 1002989 },
-    { url = "https://files.pythonhosted.org/packages/4c/f2/4b6208b84dfbfb1943aa91d14be3db8be7fd22d7f0317e56e3d669658bab/pyiceberg-0.7.1-cp310-cp310-win_amd64.whl", hash = "sha256:9b49320f3e9624075879a4ddb4fa5ddff7d4a03f6561ad6fd73d514c63095367", size = 529640 },
-    { url = "https://files.pythonhosted.org/packages/47/3a/dd56ae4fcb1550d6a6c8c869a02e9300e65f2e4a52d425610f388fd0cc18/pyiceberg-0.7.1-cp311-cp311-macosx_12_0_x86_64.whl", hash = "sha256:27e9b4033691411ef7c49d93df7b3b7f3ed85fe8019cbf0dab5a5ba888b27f34", size = 573861 },
-    { url = "https://files.pythonhosted.org/packages/95/d2/8edeedbfc7f5e3baf266f3b6310c7d4e05038346cc7a5edeb40798adc76b/pyiceberg-0.7.1-cp311-cp311-macosx_13_0_x86_64.whl", hash = "sha256:7262ba4f95e05a1421567e24c0db57288dc59974c94676aba34afef121544694", size = 575756 },
-    { url = "https://files.pythonhosted.org/packages/92/d3/eb080a2fd8dc7f4793cdc6c95daa7669e04ddd880fd99cb73f630eeb7e46/pyiceberg-0.7.1-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:3eb1fc1d47085b16973999c2111d252fab2a394625c0f25da6515b8c3233c853", size = 567588 },
-    { url = "https://files.pythonhosted.org/packages/0c/71/1ec3ca0537112546f2896b40142102881634e0599f04ceeade26f3bb0d76/pyiceberg-0.7.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1856c5d64197c9335817b8cf7081e490b601385623e5178cb094ee645d4fb24c", size = 1217034 },
-    { url = "https://files.pythonhosted.org/packages/d4/9f/2f3200d6294068802bbd3cfce8cad68d3b684d0acce673f08aa9155cf82b/pyiceberg-0.7.1-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:b6b64006c361220ce103b5bb2f50381a3f851452668adf5a6c61d39f5611e832", size = 1212220 },
-    { url = "https://files.pythonhosted.org/packages/d9/a4/8623938d21386ce04de37db69ac703572acef843c7edf624cff22a28bf24/pyiceberg-0.7.1-cp311-cp311-win_amd64.whl", hash = "sha256:57a0b1fb390d26a5b7155de011300300058343e5c2561f4839d69c1775df1d7e", size = 565493 },
-    { url = "https://files.pythonhosted.org/packages/a0/90/5718ebc67c4992200dc63a5b8c20f3c2398096b9f4a974ed19723195c1ca/pyiceberg-0.7.1-pp310-pypy310_pp73-macosx_12_0_x86_64.whl", hash = "sha256:9ae56197db8570553491173adfd2e01a03ae116a1f9fa78ba5a1a1c4e2ad3dbf", size = 669140 },
-    { url = "https://files.pythonhosted.org/packages/87/d7/711dcbeef3b997cd516bdb9025fe12aed802066ca09470171a43aa9d473c/pyiceberg-0.7.1-pp310-pypy310_pp73-macosx_13_0_x86_64.whl", hash = "sha256:e28adc58500ca72e45a07ee4dcd90b63699a8875f178001bd12ace37294c5814", size = 668770 },
-    { url = "https://files.pythonhosted.org/packages/37/cf/b1a99eb222574c92eb149a558c4d29641d10dbc73783db9b2068e8c15f71/pyiceberg-0.7.1-pp310-pypy310_pp73-macosx_14_0_arm64.whl", hash = "sha256:1ae47f2d0e87dccd158ae8dafc47125f9739858068fc3add8940f5585ea40ead", size = 657202 },
-    { url = "https://files.pythonhosted.org/packages/c8/65/244d68f414f93b5f8732a4bdfffacdacdbef07bf556ffe9816064a020d56/pyiceberg-0.7.1-pp310-pypy310_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fb94c3e11354f85daafb2b2f3e13a245bcb35848135b5ed4e8c83e61393c36ea", size = 1329793 },
-    { url = "https://files.pythonhosted.org/packages/83/cb/82b141dbea405c640335c5df330a437617cb0ef23669b86503ee5f905101/pyiceberg-0.7.1-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:4fe212b0594128d183711c6efb1a40ea5f17372e11595a84f4565eb9fe97c703", size = 657765 },
-]
 
 [package.optional-dependencies]
 pyarrow = [
-    { name = "numpy", version = "1.26.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
-    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "pyarrow" },
 ]
 
