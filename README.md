@@ -8,7 +8,7 @@ This implementation is based on the [dagster-deltalake](https://github.com/dagst
 
 ## Documentation
 
-See URL
+Documentation can be found [here](https://jasperhg90.github.io/dagster-pyiceberg/).
 
 ## To do
 
