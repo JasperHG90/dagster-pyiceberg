@@ -96,23 +96,23 @@ In the subsequent sections, we will outline how the I/O manager generates these 
 
 You may want to have different assets stored in different PyIceberg schemas. The PyIceberg I/O manager allows you to specify the schema in several ways.
 
-If you want all of your assets to be stored in the same schema, you can specify the schema as configuration to the I/O manager, as we did in [Step 1](/integrations/deltalake/using-deltalake-with-dagster#step-1-configure-the-delta-lake-io-manager) of the [Using Dagster with PyIceberg tutorial](/integrations/deltalake/using-deltalake-with-dagster).
+If you want all of your assets to be stored in the same schema, you can specify the schema as configuration to the I/O manager.
 
 If you want to store assets in different schemas, you can specify the schema as part of the asset's key:
 
-```python file=/integrations/deltalake/schema.py startafter=start_asset_key endbefore=end_asset_key
-
+```python title="docs/snippets/multiple_schemas.py" linenums="1"
+--8<-- "docs/snippets/multiple_schemas.py"
 ```
 
 In this example, the `iris_dataset` asset will be stored in the `IRIS` schema, and the `daffodil_dataset` asset will be found in the `DAFFODIL` schema.
 
-<Note>
-  The two options for specifying schema are mutually exclusive. If you provide{" "}
-  <code>schema</code> configuration to the I/O manager, you cannot also provide
-  it via the asset key and vice versa. If no <code>schema</code> is provided,
-  either from configuration or asset keys, the default schema{" "}
-  <code>public</code> will be used.
-</Note>
+!!! info "Installing dagster-pyiceberg-pandas"
+
+    The two options for specifying schema are mutually exclusive. If you provide{" "}
+    <code>schema</code> configuration to the I/O manager, you cannot also provide
+    it via the asset key and vice versa. If no <code>schema</code> is provided,
+    either from configuration or asset keys, the default schema{" "}
+    <code>public</code> will be used.
 
 ---
 
