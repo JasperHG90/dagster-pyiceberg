@@ -15,7 +15,7 @@ app = typer.Typer()
 
 
 def _has_version(inp: str) -> bool:
-    return re.search("__version__.*(?=\n)", inp) is not None
+    return re.search("(__version__|version).*(?=\n)", inp) is not None
 
 
 def _replace_version(inp: str, version: str) -> str:
