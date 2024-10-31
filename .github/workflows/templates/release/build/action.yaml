@@ -5,7 +5,7 @@ inputs:
   python_version:
     description: 'Python version to use'
     required: true
-    default: '3.8'
+    default: '3.11'
   uv_version:
     description: 'uv version to use'
     required: true
@@ -20,6 +20,14 @@ runs:
   steps:
     - name: Checkout
       uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python_version }}
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+      with:
+        uv-version: ${{ inputs.uv_version }}
     - name: 'Get version'
       id: version
       uses: JasperHG90/git-version@v3
@@ -32,3 +40,8 @@ runs:
         version: ${{ steps.version.outputs.version }}
         root: ${{ inputs.path_to_packages }}
         glob: '**/src/**/version.py,**/pyproject.toml'
+    - name: 'Build python packages'
+      id: build
+      run: |
+        uv build --all
+      shell: bash
