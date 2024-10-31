@@ -27,10 +27,10 @@ runs:
     - name: Install uv
       uses: astral-sh/setup-uv@v2
       with:
-        uv-version: ${{ inputs.uv_version }}
+        version: ${{ inputs.uv_version }}
     - name: 'Get version'
       id: version
-      uses: JasperHG90/git-version@v3
+      uses: JasperHG90/git-version@v4
     - name: 'Print version'
       run: echo "Version is ${{ steps.version.outputs.version }}"
       shell: bash
