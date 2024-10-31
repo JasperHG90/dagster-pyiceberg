@@ -8,3 +8,7 @@ reference for the technical implementation of the
 ::: dagster_pyiceberg.io_manager
 
 ::: dagster_pyiceberg.resource
+
+::: dagster_pyiceberg_pandas.pyiceberg_pandas_type_handler
+
+::: dagster_pyiceberg_polars.pyiceberg_polars_type_handler

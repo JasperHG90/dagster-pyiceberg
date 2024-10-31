@@ -12,7 +12,7 @@ nav:
   - Features: features.md
   - Reference: reference.md
   - Developing: development.md
-  #- "Code reference": code_reference.md
+  - "Code reference": code_reference.md
 
 theme:
   name: "material"
@@ -41,5 +41,8 @@ plugins:
     default_handler: python
     handlers:
       python:
-        paths: [packages/dagster_pyiceberg]
+        paths:
+        - packages/dagster_pyiceberg
+        - packages/dagster_pyiceberg_pandas
+        - packages/dagster_pyiceberg_polars
 - include-markdown
