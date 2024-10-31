@@ -138,9 +138,9 @@ The PyIceberg I/O manager also supports storing and loading PyArrow and Polars D
 
 === "PyArrow Tables"
 
-    The `deltalake` package relies heavily on Apache Arrow for efficient data transfer, so PyArrow is natively supported.
+    The `pyiceberg` package relies heavily on Apache Arrow for efficient data transfer, so PyArrow is natively supported.
 
-    You can use the `DeltaLakePyArrowIOManager` in a <PyObject object="Definitions" /> object as in [Step 1](/integrations/deltalake/using-deltalake-with-dagster#step-1-configure-the-delta-lake-io-manager) of the [Using Dagster with PyIceberg tutorial](/integrations/deltalake/using-deltalake-with-dagster).
+    You can use `IcebergPyarrowIOManager` to read and write iceberg tables:
 
     ```python title="docs/snippets/io_manager_pyarrow.py" linenums="1"
     --8<-- "docs/snippets/io_manager_pyarrow.py"
@@ -148,8 +148,27 @@ The PyIceberg I/O manager also supports storing and loading PyArrow and Polars D
 
 === "Pandas DataFrames"
 
+    !!! info "Installing dagster-pyiceberg-pandas"
+
+        To use `IcebergPandasIOManager` you must install `dagster-pyiceberg-pandas`
+
+     You can use `IcebergPandasIOManager` to read and write iceberg tables using Pandas:
+
+    ```python title="docs/snippets/io_manager_pandas.py" linenums="1"
+    --8<-- "docs/snippets/io_manager_pyarrow.py"
+    ```
 
 === "Polars DataFrames"
+
+    !!! info "Installing dagster-pyiceberg-pandas"
+
+        To use `IcebergPandasIOManager` you must install `dagster-pyiceberg-polars`
+
+     You can use the `IcebergPolarsIOManager` to read and write iceberg tables using Pandas:
+
+    ```python title="docs/snippets/io_manager_polars.py" linenums="1"
+    --8<-- "docs/snippets/io_manager_pyarrow.py"
+    ```
 
 ---
 
@@ -161,6 +180,6 @@ In addition to the PyIceberg I/O manager, Dagster also provides a PyIceberg reso
 --8<-- "docs/snippets/pyiceberg_resource.py"
 ```
 
-In this example, we attach the PyIceberg resource to the small_petals asset. In the body of the asset function, we use the get_client context manager method of the resource to get a bigquery.client.Client. We can use the client to execute a custom SQL query against the IRIS_DATA table created in Step 2: Create tables in PyIceberg of the Using Dagster with PyIceberg tutorial.
+In this example, we attach the PyIceberg resource to the small_petals asset. In the body of the asset function, we use the `load()` method to retrieve the PyIceberg `Table` object, which can then be used for further processing.
 
 For more information on the PyIceberg resource, see the PyIceberg resource API docs.
