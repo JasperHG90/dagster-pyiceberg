@@ -2,7 +2,9 @@
 
 This reference page provides information for working with dagster-pyiceberg.
 
----
+!!! warning "Iceberg catalog"
+
+    PyIceberg requires a catalog backend. A SQLite catalog is used here for illustrative purposes. Do not use this in a production setting. For more information and for catalog configuration settings, visit the [PyIceberg documentation](https://py.iceberg.apache.org/configuration/#catalogs).
 
 ## Selecting specific columns in a downstream asset
 
@@ -183,3 +185,15 @@ In addition to the PyIceberg I/O manager, Dagster also provides a PyIceberg reso
 In this example, we attach the PyIceberg resource to the small_petals asset. In the body of the asset function, we use the `load()` method to retrieve the PyIceberg `Table` object, which can then be used for further processing.
 
 For more information on the PyIceberg resource, see the PyIceberg resource API docs.
+
+---
+
+## Configuring table behavior using table properties
+
+Iceberg tables support table properties to configure table behavior. You can see a full list of properties [here](https://py.iceberg.apache.org/configuration/).
+
+Use asset metadata to set table properties:
+
+```python title="docs/snippets/table_properties.py" linenums="1"
+--8<-- "docs/snippets/table_properties.py"
+```
