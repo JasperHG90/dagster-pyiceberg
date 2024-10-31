@@ -1,11 +1,26 @@
 import pandas as pd
-from dagster import Definitions, asset
-from dagster_aws.s3.io_manager import s3_pickle_io_manager
-from dagster_deltalake import LocalConfig
-from dagster_deltalake_pandas import DeltaLakePandasIOManager
+from dagster import Definitions, FilesystemIOManager, asset
+from dagster_pyiceberg import IcebergSqlCatalogConfig
+from dagster_pyiceberg_pandas import IcebergPandasIOManager
+
+CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/catalog.db"
+CATALOG_WAREHOUSE = "file:///home/vscode/workspace/.tmp/examples/warehouse"
+FS_BASE_DIR = "/home/vscode/workspace/.tmp/examples/images"
 
 
-@asset(io_manager_key="warehouse_io_manager")
+resources = {
+    "dwh_io_manager": IcebergPandasIOManager(
+        name="test",
+        config=IcebergSqlCatalogConfig(
+            properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
+        ),
+        schema="dagster",
+    ),
+    "blob_io_manager": FilesystemIOManager(base_dir=FS_BASE_DIR),
+}
+
+
+@asset(io_manager_key="dwh_io_manager")
 def iris_dataset() -> pd.DataFrame:
     return pd.read_csv(
         "https://docs.dagster.io/assets/iris.csv",
@@ -20,20 +35,10 @@ def iris_dataset() -> pd.DataFrame:
 
 
 @asset(io_manager_key="blob_io_manager")
-def iris_plots(iris_dataset):
+def iris_plots(iris_dataset: pd.DataFrame):
     # plot_data is a function we've defined somewhere else
     # that plots the data in a DataFrame
-    return plot_data(iris_dataset)
+    return iris_dataset["sepal_length_cm"].plot.hist()
 
 
-defs = Definitions(
-    assets=[iris_dataset, iris_plots],
-    resources={
-        "warehouse_io_manager": DeltaLakePandasIOManager(
-            root_uri="path/to/deltalalke",
-            storage_options=LocalConfig(),
-            schema="iris",
-        ),
-        "blob_io_manager": s3_pickle_io_manager,
-    },
-)
+defs = Definitions(assets=[iris_dataset, iris_plots], resources=resources)
