@@ -6,11 +6,10 @@ Dagster IO manager for managing [PyIceberg](https://github.com/apache/iceberg-py
 
 This implementation is based on the [dagster-deltalake](https://github.com/dagster-io/dagster/tree/master/python_modules/libraries/dagster-deltalake) IO manager.
 
+## Status
+
+This library is currently in development.
+
 ## Documentation
 
 Documentation can be found [here](https://jasperhg90.github.io/dagster-pyiceberg/).
-
-## To do
-
-- Push to PyPi
-- Add to community list of dagster
