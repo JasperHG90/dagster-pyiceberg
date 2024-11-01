@@ -28,6 +28,8 @@ runs:
       uses: astral-sh/setup-uv@v2
       with:
         version: ${{ inputs.uv_version }}
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
     - name: 'Get version'
       id: version
       uses: JasperHG90/git-version@v4
