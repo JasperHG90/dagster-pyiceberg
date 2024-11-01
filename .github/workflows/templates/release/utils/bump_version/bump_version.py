@@ -4,6 +4,8 @@ import re
 
 import typer
 
+REGEX_PATTERN = "(__version__|version).*(?=\n)"
+
 logger = logging.getLogger("bump_version")
 handler = logging.StreamHandler()
 format = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
@@ -15,11 +17,14 @@ app = typer.Typer()
 
 
 def _has_version(inp: str) -> bool:
-    return re.search("(__version__|version).*(?=\n)", inp) is not None
+    return re.search(REGEX_PATTERN, inp) is not None
 
 
 def _replace_version(inp: str, version: str) -> str:
-    return re.sub("__version__.*(?=\n)", f'__version__ = "{version}"', inp)
+    if "__version__" in inp:
+        return re.sub(REGEX_PATTERN, f'__version__ = "{version}"', inp)
+    else:
+        return re.sub(REGEX_PATTERN, f'version = "{version}"', inp)
 
 
 def _get_version_files(root: plb.Path, glob: str) -> list[plb.Path]:
