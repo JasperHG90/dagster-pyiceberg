@@ -44,7 +44,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: libs
-          path: .
+          path: ./dist
       - name: 'Get version'
         id: version
         uses: JasperHG90/git-version@v4
