@@ -45,6 +45,8 @@ jobs:
         with:
           name: libs
           path: ./dist
+      - name: List dist folder
+        run: ls -la ./dist
       - name: 'Get version'
         id: version
         uses: JasperHG90/git-version@v4
