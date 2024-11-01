@@ -13,3 +13,7 @@ This library is currently in development.
 ## Documentation
 
 Documentation can be found [here](https://jasperhg90.github.io/dagster-pyiceberg/).
+
+## Installation
+
+See [Installing dagster-pyiceberg](https://jasperhg90.github.io/dagster-pyiceberg/installation/).
