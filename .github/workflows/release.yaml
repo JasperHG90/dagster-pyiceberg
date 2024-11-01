@@ -52,4 +52,4 @@ jobs:
         uses: JasperHG90/git-version@v4
       - name: Publish python packages
         run: |
-          gh release upload ${{ steps.version.outputs.version }} ./dist/*
+          gh release upload v${{ steps.version.outputs.version }} ./dist/*
