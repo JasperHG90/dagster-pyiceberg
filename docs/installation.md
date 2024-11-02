@@ -28,7 +28,7 @@ You can find a list of versions / releases [here](https://github.com/JasperHG90/
 
     ```shell
     # uv
-    uv add git+https://github.com/apache/iceberg-python --rev cebec4
+    uv add git+https://github.com/apache/iceberg-python --rev 0cebec4
     ```
 
 To install `dagster-pyiceberg-pandas` and `dagster-pyiceberg-polars`, you can use the same method as described above.
