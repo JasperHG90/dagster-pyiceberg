@@ -3,11 +3,10 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 import pyarrow as pa
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
 from dagster_pyiceberg._utils.partitions import (
-    IcebergTableSpecUpdater,
-    PartitionMapper,
     partition_dimensions_to_filters,
+    update_table_partition_spec,
 )
-from dagster_pyiceberg._utils.schema import update_table_schema as update_table_schema
+from dagster_pyiceberg._utils.schema import update_table_schema
 from pyiceberg import expressions as E
 from pyiceberg import table
 from pyiceberg import table as iceberg_table
@@ -76,14 +75,11 @@ def table_writer(
         )
         # Check if partitions match. If not, update
         if partition_dimensions is not None:
-            IcebergTableSpecUpdater(
-                partition_mapping=PartitionMapper(
-                    table_slice=table_slice,
-                    iceberg_table_schema=table.schema(),
-                    iceberg_partition_spec=table.spec(),
-                ),
+            update_table_partition_spec(
+                table=table,
+                table_slice=table_slice,
                 partition_spec_update_mode=partition_spec_update_mode,
-            ).update_table_spec(table=table)
+            )
     else:
         table = catalog.create_table(
             table_path,
@@ -95,16 +91,13 @@ def table_writer(
             ),
         )
         if partition_dimensions is not None:
-            IcebergTableSpecUpdater(
-                partition_mapping=PartitionMapper(
-                    table_slice=table_slice,
-                    iceberg_table_schema=table.schema(),
-                    iceberg_partition_spec=table.spec(),
-                ),
+            update_table_partition_spec(
+                table=table,
+                table_slice=table_slice,
                 # When creating new tables with dagster partitions, we always update
                 # the partition spec
                 partition_spec_update_mode="update",
-            ).update_table_spec(table=table)
+            )
 
     row_filter: E.BooleanExpression
     if partition_dimensions is not None:
