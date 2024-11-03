@@ -53,7 +53,33 @@ class PartitionMapper:
             raise ValueError(
                 "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice."
             )
-        return partition_dimensions if partition_dimensions is not None else []
+        elif partition_dimensions is None:
+            return []
+        else:
+            # Check if table columns have the correct data types
+            for partition in partition_dimensions:
+                field = self.iceberg_table_schema.find_field(partition.partition_expr)
+                if isinstance(partition.partitions, TimeWindow):
+                    if not isinstance(field.field_type, time_partition_dt_types):
+                        raise ValueError(
+                            f"You have partitioned by some time-based partition window on column '{partition.partition_expr}'"
+                            f". But the table column type associated with this partition is '{str(field.field_type)}'"
+                            f". Please cast the column to an appropriate time-based type"
+                            " (e.g. datetime.date, datetime.datetime)."
+                        )
+                elif isinstance(partition.partitions, list):
+                    if not isinstance(field.field_type, partition_types):
+                        raise ValueError(
+                            f"You have defined a static partition on column '{partition.partition_expr}'"
+                            f". But the table column type associated with this partition is 'str(field.field_type)'"
+                            f". Please cast the column to an appropriate type (e.g. string)."
+                        )
+                else:
+                    raise ValueError(
+                        f"Partition dimension of type '{type(partition.partitions)}' not supported"
+                    )
+
+            return partition_dimensions
 
     def get_iceberg_partition_field_by_name(
         self, name: str

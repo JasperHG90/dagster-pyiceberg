@@ -292,3 +292,48 @@ def test_iceberg_table_spec_updater_fails_with_error_update_mode(
     mock_iceberg_table = mock.MagicMock()
     with pytest.raises(ValueError, match="Partition spec update mode is set to"):
         spec_updater.update_table_spec(table=mock_iceberg_table)
+
+
+def test_iceberg_table_spec_updater_fails_with_bad_data_type(
+    namespace: str,
+):
+    # Situation: user returns e.g. a pandas DataFrame with a timestamp column
+    #  that is of type string, not datetime.
+    #  User partitions on this column, so we update the partition spec. However,
+    #  this is not really possible since the column is of the wrong type.
+    iceberg_table_schema = iceberg_schema.Schema(
+        T.NestedField(1, "timestamp", T.StringType()),
+        T.NestedField(
+            2,
+            "category",
+            T.StringType(),
+        ),
+    )
+    table_ = "handler_spec_updater_add_wrong_column_type"
+    spec = iceberg_partitioning.PartitionSpec()
+    table_slice = TableSlice(
+        table=table_,
+        schema=namespace,
+        partition_dimensions=[
+            TablePartitionDimension(
+                "timestamp",
+                TimeWindow(dt.datetime(2023, 1, 1), dt.datetime(2023, 1, 2)),
+            ),
+        ],
+    )
+    spec_updater = partitions.IcebergTableSpecUpdater(
+        partition_mapping=partitions.PartitionMapper(
+            iceberg_table_schema=iceberg_table_schema,
+            iceberg_partition_spec=spec,
+            table_slice=table_slice,
+        ),
+        partition_spec_update_mode="update",
+    )
+    mock_iceberg_table = mock.MagicMock()
+    spec_updater.update_table_spec(table=mock_iceberg_table)
+    mock_iceberg_table.update_spec.assert_called_once()
+    mock_iceberg_table.update_spec.return_value.__enter__.return_value.add_field.assert_called_once_with(
+        source_column_name="timestamp",
+        transform=transforms.DayTransform(),
+        partition_field_name="timestamp",
+    )
