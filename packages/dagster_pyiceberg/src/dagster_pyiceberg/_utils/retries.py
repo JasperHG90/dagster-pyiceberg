@@ -14,7 +14,7 @@ from tenacity import (
 class PyIcebergOperationException(Exception): ...
 
 
-class PyIcebergOperationWithRetry(ABCMeta):
+class PyIcebergOperationWithRetry(metaclass=ABCMeta):
 
     def __init__(self, table: Table):
         self.table = table
