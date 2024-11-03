@@ -10,7 +10,7 @@ def update_table_schema(
     table: table.Table, new_table_schema: pa.Schema, schema_update_mode: str
 ):
     PyIcebergSchemaUpdaterWithRetry(table=table).execute(
-        retries=3,
+        retries=9,
         exception_types=ValueError,
         new_table_schema=new_table_schema,
         schema_update_mode=schema_update_mode,

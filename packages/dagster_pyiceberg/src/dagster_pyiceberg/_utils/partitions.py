@@ -22,7 +22,12 @@ def update_table_partition_spec(
     table: Table, table_slice: TableSlice, partition_spec_update_mode: str
 ):
     PyIcebergPartitionSpecUpdaterWithRetry(table=table).execute(
-        retries=3,
+        # 3 retries per partition dimension
+        retries=(
+            3 * len(table_slice.partition_dimensions)
+            if len(table_slice.partition_dimensions) > 0
+            else 3
+        ),
         exception_types=ValueError,
         table_slice=table_slice,
         partition_spec_update_mode=partition_spec_update_mode,

@@ -39,6 +39,8 @@ class PyIcebergOperationWithRetry(metaclass=ABCMeta):
                 with retry:
                     try:
                         self.operation(*args, **kwargs)
+                        # Reset the attempt number on success
+                        retry.retry_state.attempt_number = 1
                     except exception_types as e:
                         # Do not refresh on the final try
                         if retry.retry_state.attempt_number < retries:
