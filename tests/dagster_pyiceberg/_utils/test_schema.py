@@ -154,6 +154,9 @@ def test_update_table_schema_with_retries_fails():
         ValueError("An error"),
         ValueError("An error"),
         ValueError("An error"),
+        ValueError("An error"),
+        ValueError("An error"),
+        ValueError("An error"),
     ]
     mock_table.update_schema.return_value.__enter__.return_value = mock_update_method
     with pytest.raises(ValueError, match="An error"):
