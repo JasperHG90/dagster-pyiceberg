@@ -3,6 +3,7 @@ from unittest import mock
 import pyarrow as pa
 import pytest
 from dagster_pyiceberg._utils import schema
+from pyiceberg.table import Table
 
 
 def test_schema_differ_removed_fields():
@@ -105,3 +106,65 @@ def test_iceberg_schema_updater_fails_with_error_update_mode():
     mock_iceberg_table = mock.MagicMock()
     with pytest.raises(ValueError):
         schema_updater.update_table_schema(table=mock_iceberg_table)
+
+
+def test_update_table_schema(table: Table):
+    schema.update_table_schema(
+        table=table,
+        new_table_schema=pa.schema(
+            [
+                pa.field("timestamp", pa.timestamp("us")),
+                pa.field("category", pa.string()),
+                pa.field("new_value", pa.float64()),
+            ]
+        ),
+        schema_update_mode="update",
+    )
+    table.refresh()
+    assert sorted(table.schema().column_names) == ["category", "new_value", "timestamp"]
+
+
+def test_update_table_schema_with_retries():
+    mock_table = mock.MagicMock()
+    mock_update_method = mock.MagicMock()
+    mock_update_method.union_by_name.side_effect = [
+        ValueError("An error"),
+        ValueError("An error"),
+        None,
+    ]
+    mock_table.update_schema.return_value.__enter__.return_value = mock_update_method
+    schema.update_table_schema(
+        table=mock_table,
+        new_table_schema=pa.schema(
+            [
+                pa.field("timestamp", pa.timestamp("us")),
+                pa.field("category", pa.string()),
+                pa.field("new_value", pa.float64()),
+            ]
+        ),
+        schema_update_mode="update",
+    )
+    assert mock_update_method.union_by_name.call_count == 3
+
+
+def test_update_table_schema_with_retries_fails():
+    mock_table = mock.MagicMock()
+    mock_update_method = mock.MagicMock()
+    mock_update_method.union_by_name.side_effect = [
+        ValueError("An error"),
+        ValueError("An error"),
+        ValueError("An error"),
+    ]
+    mock_table.update_schema.return_value.__enter__.return_value = mock_update_method
+    with pytest.raises(ValueError, match="An error"):
+        schema.update_table_schema(
+            table=mock_table,
+            new_table_schema=pa.schema(
+                [
+                    pa.field("timestamp", pa.timestamp("us")),
+                    pa.field("category", pa.string()),
+                    pa.field("new_value", pa.float64()),
+                ]
+            ),
+            schema_update_mode="update",
+        )

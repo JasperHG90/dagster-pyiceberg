@@ -195,7 +195,7 @@ def append_data_to_partitioned_update_table(
 
 @pytest.fixture(scope="function")
 def table(catalog: SqlCatalog, table_identifier: str) -> iceberg_table.Table:
-    catalog.load_table(table_identifier)
+    return catalog.load_table(table_identifier)
 
 
 @pytest.fixture(scope="function")
