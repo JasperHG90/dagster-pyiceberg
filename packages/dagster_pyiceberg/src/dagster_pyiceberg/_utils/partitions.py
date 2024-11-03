@@ -21,13 +21,12 @@ partition_types = T.StringType
 def update_table_partition_spec(
     table: Table, table_slice: TableSlice, partition_spec_update_mode: str
 ):
+    partition_dimensions = cast(
+        Sequence[TablePartitionDimension], table_slice.partition_dimensions
+    )
     PyIcebergPartitionSpecUpdaterWithRetry(table=table).execute(
         # 3 retries per partition dimension
-        retries=(
-            3 * len(table_slice.partition_dimensions)
-            if len(table_slice.partition_dimensions) > 0
-            else 3
-        ),
+        retries=(3 * len(partition_dimensions) if len(partition_dimensions) > 0 else 3),
         exception_types=ValueError,
         table_slice=table_slice,
         partition_spec_update_mode=partition_spec_update_mode,
