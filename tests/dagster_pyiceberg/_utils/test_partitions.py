@@ -366,3 +366,45 @@ def test_iceberg_table_spec_updater_fails_with_bad_static_partition_data_type(
             ),
             partition_spec_update_mode="update",
         ).update_table_spec(table=mock_iceberg_table)
+
+
+def test_update_table_partition_spec(
+    table: iceberg_table.Table, partitioned_table_slice: TableSlice
+):
+    partitions.update_table_partition_spec(
+        table=table,
+        table_slice=partitioned_table_slice,
+        partition_spec_update_mode="update",
+    )
+    table.refresh()
+    assert sorted([f.name for f in table.spec().fields]) == ["category", "timestamp"]
+
+
+def test_update_table_partition_spec_with_retries(
+    table: iceberg_table.Table, partitioned_table_slice: TableSlice
+):
+    mock_table = mock.MagicMock()
+    mock_update_method = mock.MagicMock()
+    # NB: these go for the number of fields in the partition spec
+    #  1st try: 2x ValueError -> Failure
+    #  2nd try: 1x ValueError, 1x None (success) -> Failure
+    #  3rd try: 1x ValueError, 1x None (success) -> Failure
+    #  4th try: 2x None (success) -> Success
+    mock_update_method.add_field.side_effect = [
+        ValueError("An error"),
+        ValueError("An error"),
+        None,
+        ValueError("An error"),
+        ValueError("An error"),
+        None,
+        None,
+    ]
+    mock_table.update_spec.return_value.__enter__.return_value = mock_update_method
+    mock_table.schema.return_value = table.schema()
+    partitions.update_table_partition_spec(
+        table=mock_table,
+        table_slice=partitioned_table_slice,
+        partition_spec_update_mode="update",
+    )
+    partitioned_table_slice.partition_dimensions
+    assert mock_update_method.add_field.call_count == 7

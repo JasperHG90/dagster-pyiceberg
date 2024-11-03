@@ -4,6 +4,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Set, Union, cast
 
 from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
+from dagster_pyiceberg._utils.retries import PyIcebergOperationWithRetry
 from dagster_pyiceberg._utils.transforms import diff_to_transformation
 from pyiceberg import expressions as E
 from pyiceberg import types as T
@@ -15,6 +16,34 @@ from pyiceberg.transforms import IdentityTransform
 
 time_partition_dt_types = (T.TimestampType, T.DateType)
 partition_types = T.StringType
+
+
+def update_table_partition_spec(
+    table: Table, table_slice: TableSlice, partition_spec_update_mode: str
+):
+    partition_dimensions = cast(
+        Sequence[TablePartitionDimension], table_slice.partition_dimensions
+    )
+    PyIcebergPartitionSpecUpdaterWithRetry(table=table).execute(
+        # 3 retries per partition dimension
+        retries=(3 * len(partition_dimensions) if len(partition_dimensions) > 0 else 3),
+        exception_types=ValueError,
+        table_slice=table_slice,
+        partition_spec_update_mode=partition_spec_update_mode,
+    )
+
+
+class PyIcebergPartitionSpecUpdaterWithRetry(PyIcebergOperationWithRetry):
+
+    def operation(self, table_slice: TableSlice, partition_spec_update_mode: str):
+        IcebergTableSpecUpdater(
+            partition_mapping=PartitionMapper(
+                table_slice=table_slice,
+                iceberg_table_schema=self.table.schema(),
+                iceberg_partition_spec=self.table.spec(),
+            ),
+            partition_spec_update_mode=partition_spec_update_mode,
+        ).update_table_spec(table=self.table)
 
 
 class PartitionMapper:
@@ -224,33 +253,22 @@ class IcebergTableSpecUpdater:
         self._spec_new(update=update, partition=partition)
 
     def _spec_delete(self, update: UpdateSpec, partition_name: str):
-        try:
-            update.remove_field(name=partition_name)
-        except ValueError:
-            # Already deleted by another operation
-            pass
+        update.remove_field(name=partition_name)
 
     def _spec_new(self, update: UpdateSpec, partition: TablePartitionDimension):
-        # NB: if the data type is wrong (e.g. a string) then this will silently succeed
         if isinstance(partition.partitions, TimeWindow):
             transform = diff_to_transformation(*partition.partitions)
         else:
             transform = IdentityTransform()
-        try:
-            update.add_field(
-                source_column_name=partition.partition_expr,
-                transform=transform,
-                # Name the partition field spec the same as the column name.
-                #  We rely on this throughout this codebase because it makes
-                #  it a lot easier to make the mapping between dagster partitions
-                #  and Iceberg partition fields.
-                partition_field_name=partition.partition_expr,
-            )
-        except (
-            ValueError
-        ):  # <-- error described above likely due to this value error (line 208)
-            # Already added by another operation
-            pass
+        update.add_field(
+            source_column_name=partition.partition_expr,
+            transform=transform,
+            # Name the partition field spec the same as the column name.
+            #  We rely on this throughout this codebase because it makes
+            #  it a lot easier to make the mapping between dagster partitions
+            #  and Iceberg partition fields.
+            partition_field_name=partition.partition_expr,
+        )
 
     @property
     def has_changes(self) -> bool:

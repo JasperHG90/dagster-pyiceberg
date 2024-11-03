@@ -3,11 +3,11 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 import pyarrow as pa
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
 from dagster_pyiceberg._utils.partitions import (
-    IcebergTableSpecUpdater,
-    PartitionMapper,
     partition_dimensions_to_filters,
+    update_table_partition_spec,
 )
-from dagster_pyiceberg._utils.schema import IcebergTableSchemaUpdater, SchemaDiffer
+from dagster_pyiceberg._utils.retries import PyIcebergOperationWithRetry
+from dagster_pyiceberg._utils.schema import update_table_schema
 from pyiceberg import expressions as E
 from pyiceberg import table
 from pyiceberg import table as iceberg_table
@@ -16,7 +16,6 @@ from pyiceberg.catalog.sql import SqlCatalog
 from pyiceberg.exceptions import CommitFailedException
 from pyiceberg.partitioning import PartitionSpec
 from pyiceberg.schema import Schema
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_random
 
 CatalogTypes = Union[SqlCatalog, RestCatalog]
 
@@ -69,23 +68,18 @@ def table_writer(
     if catalog.table_exists(table_path):
         table = catalog.load_table(table_path)
         # Check if schema matches. If not, update
-        IcebergTableSchemaUpdater(
-            schema_differ=SchemaDiffer(
-                current_table_schema=table.schema().as_arrow(),
-                new_table_schema=data.schema,
-            ),
+        update_table_schema(
+            table=table,
+            new_table_schema=data.schema,
             schema_update_mode=schema_update_mode,
-        ).update_table_schema(table=table)
+        )
         # Check if partitions match. If not, update
         if partition_dimensions is not None:
-            IcebergTableSpecUpdater(
-                partition_mapping=PartitionMapper(
-                    table_slice=table_slice,
-                    iceberg_table_schema=table.schema(),
-                    iceberg_partition_spec=table.spec(),
-                ),
+            update_table_partition_spec(
+                table=table,
+                table_slice=table_slice,
                 partition_spec_update_mode=partition_spec_update_mode,
-            ).update_table_spec(table=table)
+            )
     else:
         table = catalog.create_table(
             table_path,
@@ -97,16 +91,13 @@ def table_writer(
             ),
         )
         if partition_dimensions is not None:
-            IcebergTableSpecUpdater(
-                partition_mapping=PartitionMapper(
-                    table_slice=table_slice,
-                    iceberg_table_schema=table.schema(),
-                    iceberg_partition_spec=table.spec(),
-                ),
+            update_table_partition_spec(
+                table=table,
+                table_slice=table_slice,
                 # When creating new tables with dagster partitions, we always update
                 # the partition spec
                 partition_spec_update_mode="update",
-            ).update_table_spec(table=table)
+            )
 
     row_filter: E.BooleanExpression
     if partition_dimensions is not None:
@@ -118,9 +109,9 @@ def table_writer(
     else:
         row_filter = iceberg_table.ALWAYS_TRUE
 
-    overwrite_table_with_retries(
+    overwrite_table(
         table=table,
-        df=data,
+        data=data,
         overwrite_filter=row_filter,
         snapshot_properties=(
             base_properties | {"dagster_partition_key": dagster_partition_key}
@@ -173,12 +164,11 @@ def get_row_filter(
     )
 
 
-def overwrite_table_with_retries(
+def overwrite_table(
     table: table.Table,
-    df: pa.Table,
+    data: pa.Table,
     overwrite_filter: Union[E.BooleanExpression, str],
     snapshot_properties: Optional[Dict[str, str]] = None,
-    retries: int = 4,
 ):
     """Overwrites an iceberg table and retries on failure
 
@@ -189,37 +179,31 @@ def overwrite_table_with_retries(
         table (table.Table): Iceberg table
         df (pa.Table): Data to write to the table
         overwrite_filter (Union[E.BooleanExpression, str]): Filter to apply to the overwrite operation
-        retries (int, optional): Max number of retries. Defaults to 4.
 
     Raises:
         RetryError: Raised when the commit fails after the maximum number of retries
     """
-    try:
-        for retry in Retrying(
-            stop=stop_after_attempt(retries), reraise=True, wait=wait_random(0.1, 0.99)
-        ):
-            with retry:
-                try:
-                    with table.transaction() as tx:
-                        # An overwrite may produce zero or more snapshots based on the operation:
+    PyIcebergTableOverwriterWithRetry(table=table).execute(
+        retries=3,
+        exception_types=CommitFailedException,
+        data=data,
+        overwrite_filter=overwrite_filter,
+        snapshot_properties=snapshot_properties,
+    )
 
-                        #  DELETE: In case existing Parquet files can be dropped completely.
-                        #  REPLACE: In case existing Parquet files need to be rewritten.
-                        #  APPEND: In case new data is being inserted into the table.
-                        tx.overwrite(
-                            df=df,
-                            overwrite_filter=overwrite_filter,
-                            snapshot_properties=(
-                                snapshot_properties
-                                if snapshot_properties is not None
-                                else {}
-                            ),
-                        )
-                        tx.commit_transaction()
-                except CommitFailedException:
-                    # Do not refresh on the final try
-                    if retry.retry_state.attempt_number < retries:
-                        table.refresh()
-    except RetryError as e:
-        # Ignore PyRight error since it's a problem in tenacity
-        raise RetryError(f"Commit failed after {retries} retries") from e  # type: ignore
+
+class PyIcebergTableOverwriterWithRetry(PyIcebergOperationWithRetry):
+
+    def operation(
+        self,
+        data: pa.Table,
+        overwrite_filter: Union[E.BooleanExpression, str],
+        snapshot_properties: Optional[Dict[str, str]] = None,
+    ):
+        self.table.overwrite(
+            df=data,
+            overwrite_filter=overwrite_filter,
+            snapshot_properties=(
+                snapshot_properties if snapshot_properties is not None else {}
+            ),
+        )
