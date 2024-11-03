@@ -7,7 +7,7 @@ from dagster_pyiceberg._utils.partitions import (
     PartitionMapper,
     partition_dimensions_to_filters,
 )
-from dagster_pyiceberg._utils.schema import IcebergTableSchemaUpdater, SchemaDiffer
+from dagster_pyiceberg._utils.schema import update_table_schema as update_table_schema
 from pyiceberg import expressions as E
 from pyiceberg import table
 from pyiceberg import table as iceberg_table
@@ -69,13 +69,11 @@ def table_writer(
     if catalog.table_exists(table_path):
         table = catalog.load_table(table_path)
         # Check if schema matches. If not, update
-        IcebergTableSchemaUpdater(
-            schema_differ=SchemaDiffer(
-                current_table_schema=table.schema().as_arrow(),
-                new_table_schema=data.schema,
-            ),
+        update_table_schema(
+            table=table,
+            new_table_schema=data.schema,
             schema_update_mode=schema_update_mode,
-        ).update_table_schema(table=table)
+        )
         # Check if partitions match. If not, update
         if partition_dimensions is not None:
             IcebergTableSpecUpdater(

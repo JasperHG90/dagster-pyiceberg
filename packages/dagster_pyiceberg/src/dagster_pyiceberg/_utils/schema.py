@@ -2,8 +2,31 @@ from functools import cached_property
 from typing import List
 
 import pyarrow as pa
+from dagster_pyiceberg._utils.retries import PyIcebergOperationWithRetry
 from pyiceberg import table
-from pyiceberg.table.update.schema import UpdateSchema
+
+
+def update_table_schema(
+    table: table.Table, new_table_schema: pa.Schema, schema_update_mode: str
+):
+    PyIcebergSchemaUpdaterWithRetry(table=table).execute(
+        retries=3,
+        exception_types=ValueError,
+        new_table_schema=new_table_schema,
+        schema_update_mode=schema_update_mode,
+    )
+
+
+class PyIcebergSchemaUpdaterWithRetry(PyIcebergOperationWithRetry):
+
+    def operation(self, new_table_schema: pa.Schema, schema_update_mode: str):
+        IcebergTableSchemaUpdater(
+            schema_differ=SchemaDiffer(
+                current_table_schema=self.table.schema().as_arrow(),
+                new_table_schema=new_table_schema,
+            ),
+            schema_update_mode=schema_update_mode,
+        ).update_table_schema(self.table)
 
 
 class SchemaDiffer:
@@ -41,22 +64,6 @@ class IcebergTableSchemaUpdater:
         self.schema_update_mode = schema_update_mode
         self.schema_differ = schema_differ
 
-    @staticmethod
-    def _delete_column(update: UpdateSchema, column: str):
-        try:
-            update.delete_column(column)
-        except ValueError:
-            # Already deleted by another operation
-            pass
-
-    @staticmethod
-    def _merge_schemas(update: UpdateSchema, new_table_schema: pa.Schema):
-        try:
-            update.union_by_name(new_table_schema)
-        except ValueError:
-            # Already merged by another operation
-            pass
-
     def update_table_schema(self, table: table.Table):
         if self.schema_update_mode == "error" and self.schema_differ.has_changes:
             raise ValueError(
@@ -67,6 +74,6 @@ class IcebergTableSchemaUpdater:
         else:
             with table.update_schema() as update:
                 for column in self.schema_differ.deleted_columns:
-                    self._delete_column(update, column)
+                    update.delete_column(column)
                 if self.schema_differ.new_columns:
-                    self._merge_schemas(update, self.schema_differ.new_table_schema)
+                    update.union_by_name(self.schema_differ.new_table_schema)
