@@ -63,7 +63,7 @@ def table_writer(
             raise ValueError(
                 f"Could not map partition to partition expr, got '{partition_exprs}'."
                 "Did you name your partitions correctly and provided the correct"
-                "'partition_expr' in the asset metadata?"
+                " 'partition_expr' in the asset metadata?"
             )
         partition_dimensions = table_slice.partition_dimensions
     if catalog.table_exists(table_path):

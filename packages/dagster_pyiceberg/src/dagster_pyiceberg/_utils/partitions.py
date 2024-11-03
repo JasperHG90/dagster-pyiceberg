@@ -205,6 +205,7 @@ class IcebergTableSpecUpdater:
             pass
 
     def _spec_new(self, update: UpdateSpec, partition: TablePartitionDimension):
+        # NB: if the data type is wrong (e.g. a string) then this will silently succeed
         if isinstance(partition.partitions, TimeWindow):
             transform = diff_to_transformation(*partition.partitions)
         else:
@@ -219,7 +220,9 @@ class IcebergTableSpecUpdater:
                 #  and Iceberg partition fields.
                 partition_field_name=partition.partition_expr,
             )
-        except ValueError:
+        except (
+            ValueError
+        ):  # <-- error described above likely due to this value error (line 208)
             # Already added by another operation
             pass
 
