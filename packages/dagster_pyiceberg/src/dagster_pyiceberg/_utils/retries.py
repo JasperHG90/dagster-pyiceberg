@@ -39,10 +39,11 @@ class PyIcebergOperationWithRetry(metaclass=ABCMeta):
                 with retry:
                     try:
                         self.operation(*args, **kwargs)
-                    except exception_types:
+                    except exception_types as e:
                         # Do not refresh on the final try
                         if retry.retry_state.attempt_number < retries:
                             self.table = self.table.refresh()
+                        raise e
         except RetryError as e:
             raise PyIcebergOperationException(
                 f"Max retries exceeded for class {str(self.__class__)}"

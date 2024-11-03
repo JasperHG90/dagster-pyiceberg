@@ -200,17 +200,10 @@ class PyIcebergTableOverwriterWithRetry(PyIcebergOperationWithRetry):
         overwrite_filter: Union[E.BooleanExpression, str],
         snapshot_properties: Optional[Dict[str, str]] = None,
     ):
-        with self.table.transaction() as tx:
-            # An overwrite may produce zero or more snapshots based on the operation:
-
-            #  DELETE: In case existing Parquet files can be dropped completely.
-            #  REPLACE: In case existing Parquet files need to be rewritten.
-            #  APPEND: In case new data is being inserted into the table.
-            tx.overwrite(
-                df=data,
-                overwrite_filter=overwrite_filter,
-                snapshot_properties=(
-                    snapshot_properties if snapshot_properties is not None else {}
-                ),
-            )
-            tx.commit_transaction()
+        self.table.overwrite(
+            df=data,
+            overwrite_filter=overwrite_filter,
+            snapshot_properties=(
+                snapshot_properties if snapshot_properties is not None else {}
+            ),
+        )
