@@ -101,8 +101,8 @@ def daily_partitioned(context: AssetExecutionContext) -> pa.Table:
     config_schema={"value": str},
     metadata={
         "partition_expr": {
-            "date": "date",
-            "category": "category",
+            "date": "date_this",
+            "category": "category_this",
         }
     },
 )
@@ -113,7 +113,12 @@ def multi_partitioned(context: AssetExecutionContext) -> pa.Table:
     value = context.op_execution_context.op_config["value"]
 
     return pa.Table.from_pydict(
-        {"date": [date_parsed], "value": [value], "b": [1], "category": [category]}
+        {
+            "date_this": [date_parsed],
+            "value": [value],
+            "b": [1],
+            "category_this": [category],
+        }
     )
 
 
@@ -225,10 +230,10 @@ def test_iceberg_io_manager_with_multipartitioned_assets(
 
     table = catalog.load_table(asset_multi_partitioned_table_identifier)
     assert len(table.spec().fields) == 2
-    assert [f.name for f in table.spec().fields] == ["category", "date"]
+    assert [f.name for f in table.spec().fields] == ["category_this", "date_this"]
 
     out_df = table.scan().to_arrow()
-    assert out_df["date"].to_pylist() == [
+    assert out_df["date_this"].to_pylist() == [
         dt.date(2022, 1, 2),
         dt.date(2022, 1, 2),
         dt.date(2022, 1, 2),
@@ -236,4 +241,4 @@ def test_iceberg_io_manager_with_multipartitioned_assets(
         dt.date(2022, 1, 1),
         dt.date(2022, 1, 1),
     ]
-    assert out_df["category"].to_pylist() == ["c", "b", "a", "c", "b", "a"]
+    assert out_df["category_this"].to_pylist() == ["c", "b", "a", "c", "b", "a"]
