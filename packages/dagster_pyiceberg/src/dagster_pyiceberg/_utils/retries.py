@@ -42,7 +42,7 @@ class PyIcebergOperationWithRetry(metaclass=ABCMeta):
                     except exception_types as e:
                         # Do not refresh on the final try
                         if retry.retry_state.attempt_number < retries:
-                            self.table = self.table.refresh()
+                            self.table.refresh()
                         raise e
         except RetryError as e:
             raise PyIcebergOperationException(
