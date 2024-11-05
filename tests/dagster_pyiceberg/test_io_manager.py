@@ -5,19 +5,14 @@ import pyarrow as pa
 import pytest
 from dagster import (
     AssetExecutionContext,
-    AssetKey,
     DailyPartitionsDefinition,
     HourlyPartitionsDefinition,
     MultiPartitionsDefinition,
-    PartitionKeyRange,
     StaticPartitionsDefinition,
     asset,
-    build_input_context,
-    build_output_context,
     materialize,
 )
 from dagster_pyiceberg import IcebergPyarrowIOManager, IcebergSqlCatalogConfig
-from dagster_pyiceberg.io_manager import CustomDbIOManager
 from pyiceberg.catalog.sql import SqlCatalog
 
 
@@ -104,7 +99,9 @@ def daily_partitioned(context: AssetExecutionContext) -> pa.Table:
     key_prefix=["my_schema"],
     partitions_def=MultiPartitionsDefinition(
         partitions_defs={
-            "date": DailyPartitionsDefinition(start_date="2022-01-01"),
+            "date": DailyPartitionsDefinition(
+                start_date="2022-01-01", end_date="2022-01-10"
+            ),
             "category": StaticPartitionsDefinition(["a", "b", "c"]),
         }
     ),
@@ -252,71 +249,3 @@ def test_iceberg_io_manager_with_multipartitioned_assets(
         dt.date(2022, 1, 1),
     ]
     assert out_df["category_this"].to_pylist() == ["c", "b", "a", "c", "b", "a"]
-
-
-def test_custom_db_io_manager_multipartition_table_slice(
-    custom_db_io_manager: CustomDbIOManager,
-):
-    input_context = build_input_context(
-        name="result",
-        definition_metadata={
-            "partition_expr": {"date": "date", "category": "category"}
-        },
-        resource_config={
-            "name": "default",
-            "config": {
-                "sql": {
-                    "properties": {
-                        "uri": "postgresql+psycopg2://test:test@localhost:32783/test",
-                        "warehouse": "file:///tmp/pytest-of-vscode/pytest-6/warehouse0",
-                    }
-                }
-            },
-            "schema": "pytest",
-            "partition_spec_update_mode": "error",
-            "schema_update_mode": "error",
-        },
-        partition_key="a|2022-01-01",
-        asset_partition_key_range=PartitionKeyRange(
-            start="a|2022-01-01", end="a|2022-01-01"
-        ),
-        asset_partitions_def=MultiPartitionsDefinition(
-            partitions_defs={
-                "date": DailyPartitionsDefinition(start_date="2022-01-01"),
-                "category": StaticPartitionsDefinition(["a", "b", "c"]),
-            }
-        ),
-        asset_key=AssetKey(["pytest", "multi_partitioned"]),
-    )
-    output_context = build_output_context(
-        name="result",
-        definition_metadata={
-            "partition_expr": {"date": "date", "category": "category"}
-        },
-        resource_config={
-            "name": "default",
-            "config": {
-                "sql": {
-                    "properties": {
-                        "uri": "postgresql+psycopg2://test:test@localhost:32783/test",
-                        "warehouse": "file:///tmp/pytest-of-vscode/pytest-6/warehouse0",
-                    }
-                }
-            },
-            "schema": "pytest",
-            "partition_spec_update_mode": "error",
-            "schema_update_mode": "error",
-        },
-        partition_key="a|2022-01-01",
-        asset_key=AssetKey(["pytest", "multi_partitioned"]),
-        # asset_partition_key_range=PartitionKeyRange(start='a|2022-01-01', end='a|2022-01-01'),
-        # asset_partitions_def=MultiPartitionsDefinition(
-        #     partitions_defs={
-        #         "date": DailyPartitionsDefinition(start_date="2022-01-01"),
-        #         "category": StaticPartitionsDefinition(["a", "b", "c"]),
-        #     }
-        # ),
-    )
-    custom_db_io_manager._get_table_slice(
-        context=input_context, output_context=output_context
-    )
