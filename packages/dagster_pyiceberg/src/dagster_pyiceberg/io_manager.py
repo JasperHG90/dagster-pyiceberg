@@ -22,6 +22,9 @@ from dagster import (
     TimeWindowPartitionsDefinition,
 )
 from dagster._config.pythonic_config import ConfigurableIOManagerFactory
+from dagster._core.definitions.multi_dimensional_partitions import (
+    PartitionDimensionDefinition,
+)
 from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.storage.db_io_manager import (
     DbClient,
@@ -117,6 +120,39 @@ class CustomDbIOManager(DbIOManager):
                 schema = "public"
 
             if context.has_asset_partitions:
+                if output_context.has_partition_key:
+                    output_partition_key_valid: bool = False
+                    # Check if the output context partition key is in the asset partitions
+                    asset_partitions_def: MultiPartitionsDefinition = (
+                        context.asset_partitions_def
+                    )
+                    if len(output_context.partition_key.split("|")) > 1:
+                        output_partition_key_parsed = (
+                            asset_partitions_def.get_partition_key_from_str(
+                                output_context.partition_key
+                            )
+                        )
+                        if output_partition_key_parsed.keys_by_dimension.keys() == set(
+                            asset_partitions_def.partition_dimension_names
+                        ):
+                            output_partition_key_valid = True
+                    else:
+                        partition_defs: List[PartitionDimensionDefinition] = (
+                            asset_partitions_def._partitions_defs
+                        )
+                        for partition in partition_defs:
+                            output_partition_key_valid = (
+                                partition.partitions_def.has_partition_key(
+                                    output_context.partition_key
+                                )
+                            )
+                            if output_partition_key_valid:
+                                break
+                        if not output_partition_key_valid:
+                            raise ValueError(
+                                f"Output context partition key '{output_context.partition_key}' is not present in the upstream"
+                                " asset partitions."
+                            )
                 partition_expr = output_context_metadata.get("partition_expr")
                 if partition_expr is None:
                     raise ValueError(
@@ -325,6 +361,20 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
     def default_load_type() -> Optional[Type]:
         return None
 
+    def create_io_manager(self, context) -> DbIOManager:
+        self.config.model_dump()
+        return DbIOManager(
+            db_client=IcebergDbClient(),
+            database="iceberg",
+            schema=self.schema_,
+            type_handlers=self.type_handlers(),
+            default_load_type=self.default_load_type(),
+            io_manager_name="IcebergIOManager",
+        )
+
+
+class CustomIcebergIOManager(IcebergIOManager):
+
     def create_io_manager(self, context) -> CustomDbIOManager:
         self.config.model_dump()
         return CustomDbIOManager(
@@ -333,7 +383,7 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
             schema=self.schema_,
             type_handlers=self.type_handlers(),
             default_load_type=self.default_load_type(),
-            io_manager_name="IcebergIOManager",
+            io_manager_name="CustomIcebergIOManager",
         )
 
 
