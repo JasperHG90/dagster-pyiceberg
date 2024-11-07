@@ -110,13 +110,7 @@ class CustomDbIOManager(DbIOManager):
                             ]
                             dates_generated = [pendulum.instance(start)] + [
                                 pendulum.instance(start).add(hours=deltas[0] * i)
-                                for i in range(
-                                    (
-                                        pendulum.instance(end)
-                                        - pendulum.instance(start)
-                                    ).in_days()
-                                    + 1
-                                )
+                                for i in range(date_diff(start, end).in_days() + 1)
                             ]
                             if len(set(dates_generated) - set(dates_passed)) != 1:
                                 raise ValueError("Dates are not consecutive.")
