@@ -375,7 +375,9 @@ def partition_dimensions_to_filters(
     return partition_filters
 
 
-def partition_filter(table_partition: TablePartitionDimension) -> E.BooleanExpression:
+def partition_filter(
+    table_partition: TablePartitionDimension,
+) -> E.BooleanExpression | List[E.BooleanExpression]:
     partition = cast(Sequence[str], table_partition.partitions)
     if len(partition) > 1:
         return [E.EqualTo(table_partition.partition_expr, p) for p in partition]
