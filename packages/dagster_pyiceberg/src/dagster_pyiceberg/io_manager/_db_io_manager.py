@@ -132,11 +132,10 @@ class CustomDbIOManager(DbIOManager):
                         elif all(
                             isinstance(partition, str) for partition in partitions
                         ):
-                            partitions_ = cast(List[str], partitions)
                             partition_dimensions.append(
                                 TablePartitionDimension(
                                     partition_expr=cast(str, partition_expr_str),
-                                    partitions=list(set(partitions_)),
+                                    partitions=list(set(cast(List[str], partitions))),
                                 )
                             )
                         else:
