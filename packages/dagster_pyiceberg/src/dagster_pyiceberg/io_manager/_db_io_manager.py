@@ -94,18 +94,19 @@ class CustomDbIOManager(DbIOManager):
                             isinstance(partition, TimeWindow)
                             for partition in partitions
                         ):
-                            partitions = cast(List[TimeWindow], partitions)
-                            start = min([w.start for w in partitions])
-                            end = max([w.end for w in partitions])
+                            partitions_ = cast(List[TimeWindow], partitions)
+                            start = min([w.start for w in partitions_])
+                            end = max([w.end for w in partitions_])
                             deltas = [
-                                date_diff(w.start, w.end).in_hours() for w in partitions
+                                date_diff(w.start, w.end).in_hours()
+                                for w in partitions_
                             ]
                             if len(set(deltas)) != 1:
                                 raise ValueError(
                                     "TimeWindowPartitionsDefinition must have the same delta from start to end"
                                 )
                             dates_passed = [
-                                pendulum.instance(d.start) for d in partitions
+                                pendulum.instance(d.start) for d in partitions_
                             ]
                             dates_generated = [pendulum.instance(start)] + [
                                 pendulum.instance(start).add(hours=deltas[0] * i)
@@ -123,8 +124,8 @@ class CustomDbIOManager(DbIOManager):
                                 TablePartitionDimension(
                                     partition_expr=cast(str, partition_expr_str),
                                     partitions=TimeWindow(
-                                        start=min([w.start for w in partitions]),
-                                        end=max([w.end for w in partitions]),
+                                        start=min([w.start for w in partitions_]),
+                                        end=max([w.end for w in partitions_]),
                                     ),
                                 )
                             )
