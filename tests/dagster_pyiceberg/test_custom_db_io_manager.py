@@ -250,10 +250,10 @@ def test_multi_partitioned_to_multi_partitioned_with_different_dimensions(
             resources=resource_defs,
         )
         assert res.success
-    res = materialize(
-        [multi_partitioned_asset_1, mapped_multi_partition],
-        partition_key="2022-01-01|a",
-        resources=resource_defs,
-        selection=[mapped_multi_partition],
-    )
-    assert res.success
+    with pytest.raises(ValueError, match="Dates are not consecutive."):
+        res = materialize(
+            [multi_partitioned_asset_1, mapped_multi_partition],
+            partition_key="2022-01-01|a",
+            resources=resource_defs,
+            selection=[mapped_multi_partition],
+        )

@@ -32,11 +32,12 @@ def test_partition_filter(category_table_partition_dimension: TablePartitionDime
     assert filter_ == expected_filter
 
 
-def test_partition_filter_fails_with_multiple(
+def test_partition_filter_with_multiple(
     category_table_partition_dimension_multiple: TablePartitionDimension,
 ):
-    with pytest.raises(NotImplementedError):
-        partitions.partition_filter(category_table_partition_dimension_multiple)
+    expected_filter = [E.EqualTo("category", "A"), E.EqualTo("category", "B")]
+    filter_ = partitions.partition_filter(category_table_partition_dimension_multiple)
+    assert filter_ == expected_filter
 
 
 def test_partition_dimensions_to_filters(
