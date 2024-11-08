@@ -1,7 +1,8 @@
-from typing import List, Mapping, Union, cast  # noqa
+import datetime as dt
+from typing import Dict, List, Mapping, Sequence, Union, cast  # noqa
 
-import pendulum
 from dagster import (
+    AssetKey,
     InputContext,
     MultiPartitionKey,
     MultiPartitionsDefinition,
@@ -15,6 +16,108 @@ from dagster._core.storage.db_io_manager import (
     TableSlice,
 )
 from dagster_pyiceberg._utils.transforms import date_diff
+from pendulum import instance as pdi
+
+
+class MultiTimePartitionsChecker:
+
+    def __init__(self, partitions: List[TimeWindow]):
+        self._partitions = partitions
+
+    @property
+    def start(self) -> dt.datetime:
+        return min([w.start for w in self._partitions])
+
+    @property
+    def end(self) -> dt.datetime:
+        return max([w.end for w in self._partitions])
+
+    @property
+    def hourly_deltas(self) -> List[int]:
+        deltas = [date_diff(w.start, w.end).in_hours() for w in self._partitions]
+        if len(set(deltas)) != 1:
+            raise ValueError(
+                "TimeWindowPartitionsDefinition must have the same delta from start to end"
+            )
+        return deltas
+
+    @property
+    def hourly_delta(self) -> int | None:
+        return next(iter(set(self.hourly_deltas)), None)
+
+    def is_consecutive(self):
+        return (
+            True
+            if len(
+                set(
+                    [
+                        pdi(self.start).add(hours=self.hourly_delta * i)
+                        for i in range(date_diff(self.start, self.end).in_days() + 1)
+                    ]
+                )
+                - set([pdi(d.start) for d in self._partitions])
+            )
+            == 1
+            else False
+        )
+
+
+def parse_multi_asset_partitions_def(
+    asset_partition_keys: Sequence[str],
+    asset_partitions_def: MultiPartitionsDefinition,
+    partition_expr: Mapping[str, str],
+    asset_key: AssetKey,
+) -> List[TablePartitionDimension]:
+    partition_dimensions: List[TablePartitionDimension] = []
+    multi_partition_key_mappings = [
+        cast(MultiPartitionKey, partition_key).keys_by_dimension
+        for partition_key in asset_partition_keys
+    ]
+    for part in asset_partitions_def.partitions_defs:
+        partitions: List[Union[TimeWindow, str]] = []
+        for multi_partition_key_mapping in multi_partition_key_mappings:
+            partition_key = multi_partition_key_mapping[part.name]
+            if isinstance(part.partitions_def, TimeWindowPartitionsDefinition):
+                partitions.append(
+                    part.partitions_def.time_window_for_partition_key(partition_key)
+                )
+            else:
+                partitions.append(partition_key)
+
+        partition_expr_str = partition_expr.get(part.name)
+        if partition_expr is None:
+            raise ValueError(
+                f"Asset '{asset_key}' has partition {part.name}, but the"
+                f" 'partition_expr' metadata does not contain a {part.name} entry,"
+                " so we don't know what column to filter it on. Specify which"
+                " column of the database contains data for the"
+                f" {part.name} partition."
+            )
+        if all(isinstance(partition, TimeWindow) for partition in partitions):
+            checker = MultiTimePartitionsChecker(
+                partitions=cast(List[TimeWindow], partitions)
+            )
+            if not checker.is_consecutive():
+                raise ValueError("Dates are not consecutive.")
+            partition_dimensions.append(
+                TablePartitionDimension(
+                    partition_expr=cast(str, partition_expr_str),
+                    partitions=TimeWindow(
+                        start=checker.start,
+                        end=checker.end,
+                    ),
+                )
+            )
+        elif all(isinstance(partition, str) for partition in partitions):
+            partition_dimensions.append(
+                TablePartitionDimension(
+                    partition_expr=cast(str, partition_expr_str),
+                    partitions=list(set(cast(List[str], partitions))),
+                )
+            )
+        else:
+            raise ValueError("Unknown partition type")
+    return partition_dimensions
 
 
 class CustomDbIOManager(DbIOManager):
@@ -28,6 +131,23 @@ class CustomDbIOManager(DbIOManager):
             - Open PR: <https://github.com/dagster-io/dagster/pull/20400>
     """
 
+    def _get_schema(
+        self,
+        context: Union[OutputContext, InputContext],
+        output_context_metadata: Dict[str, str],
+    ) -> str:
+        asset_key_path = context.asset_key.path
+        # schema order of precedence: metadata, I/O manager 'schema' config, key_prefix
+        if output_context_metadata.get("schema"):
+            schema = cast(str, output_context_metadata["schema"])
+        elif self._schema:
+            schema = self._schema
+        elif len(asset_key_path) > 1:
+            schema = asset_key_path[-2]
+        else:
+            schema = "public"
+        return schema
+
     def _get_table_slice(
         self, context: Union[OutputContext, InputContext], output_context: OutputContext
     ) -> TableSlice:
@@ -37,17 +157,8 @@ class CustomDbIOManager(DbIOManager):
         table: str
         partition_dimensions: List[TablePartitionDimension] = []
         if context.has_asset_key:
-            asset_key_path = context.asset_key.path
-            table = asset_key_path[-1]
-            # schema order of precedence: metadata, I/O manager 'schema' config, key_prefix
-            if output_context_metadata.get("schema"):
-                schema = cast(str, output_context_metadata["schema"])
-            elif self._schema:
-                schema = self._schema
-            elif len(asset_key_path) > 1:
-                schema = asset_key_path[-2]
-            else:
-                schema = "public"
+            table = context.asset_key.path[-1]
+            schema = self._get_schema(context, output_context_metadata)
 
             if context.has_asset_partitions:
                 partition_expr = output_context_metadata.get("partition_expr")
@@ -60,80 +171,13 @@ class CustomDbIOManager(DbIOManager):
                     )
 
                 if isinstance(context.asset_partitions_def, MultiPartitionsDefinition):
-                    multi_partition_key_mappings = [
-                        cast(MultiPartitionKey, partition_key).keys_by_dimension
-                        for partition_key in context.asset_partition_keys
-                    ]
-                    for part in context.asset_partitions_def.partitions_defs:
-                        partitions: List[Union[TimeWindow, str]] = []
-                        for multi_partition_key_mapping in multi_partition_key_mappings:
-                            partition_key = multi_partition_key_mapping[part.name]
-                            if isinstance(
-                                part.partitions_def, TimeWindowPartitionsDefinition
-                            ):
-                                partitions.append(
-                                    part.partitions_def.time_window_for_partition_key(
-                                        partition_key
-                                    )
-                                )
-                            else:
-                                partitions.append(partition_key)
-
-                        partition_expr_str = cast(
-                            Mapping[str, str], partition_expr
-                        ).get(part.name)
-                        if partition_expr is None:
-                            raise ValueError(
-                                f"Asset '{context.asset_key}' has partition {part.name}, but the"
-                                f" 'partition_expr' metadata does not contain a {part.name} entry,"
-                                " so we don't know what column to filter it on. Specify which"
-                                " column of the database contains data for the"
-                                f" {part.name} partition."
-                            )
-                        if all(
-                            isinstance(partition, TimeWindow)
-                            for partition in partitions
-                        ):
-                            partitions_ = cast(List[TimeWindow], partitions)
-                            start = min([w.start for w in partitions_])
-                            end = max([w.end for w in partitions_])
-                            deltas = [
-                                date_diff(w.start, w.end).in_hours()
-                                for w in partitions_
-                            ]
-                            if len(set(deltas)) != 1:
-                                raise ValueError(
-                                    "TimeWindowPartitionsDefinition must have the same delta from start to end"
-                                )
-                            dates_passed = [
-                                pendulum.instance(d.start) for d in partitions_
-                            ]
-                            dates_generated = [pendulum.instance(start)] + [
-                                pendulum.instance(start).add(hours=deltas[0] * i)
-                                for i in range(date_diff(start, end).in_days() + 1)
-                            ]
-                            if len(set(dates_generated) - set(dates_passed)) != 1:
-                                raise ValueError("Dates are not consecutive.")
-                            partition_dimensions.append(
-                                TablePartitionDimension(
-                                    partition_expr=cast(str, partition_expr_str),
-                                    partitions=TimeWindow(
-                                        start=min([w.start for w in partitions_]),
-                                        end=max([w.end for w in partitions_]),
-                                    ),
-                                )
-                            )
-                        elif all(
-                            isinstance(partition, str) for partition in partitions
-                        ):
-                            partition_dimensions.append(
-                                TablePartitionDimension(
-                                    partition_expr=cast(str, partition_expr_str),
-                                    partitions=list(set(cast(List[str], partitions))),
-                                )
-                            )
-                        else:
-                            raise ValueError("Unknown partition type")
+                    for partition_dimension in parse_multi_asset_partitions_def(
+                        context.asset_partition_keys,
+                        context.asset_partitions_def,
+                        cast(Mapping[str, str], partition_expr),
+                        context.asset_key,
+                    ):
+                        partition_dimensions.append(partition_dimension)
                 elif isinstance(
                     context.asset_partitions_def, TimeWindowPartitionsDefinition
                 ):
