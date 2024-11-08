@@ -68,13 +68,12 @@ class MultiTimePartitionsChecker:
 
 
 def generate_multi_partitions_dimension(
-    asset_partition_keys: Sequence[str],
+    asset_partition_keys: Sequence[MultiPartitionKey],
     asset_partitions_def: MultiPartitionsDefinition,
     partition_expr: Mapping[str, str],
     asset_key: AssetKey,
 ) -> List[TablePartitionDimension]:
     partition_dimensions: List[TablePartitionDimension] = []
-    MultiPartitionKey(keys_by_dimension={"color": "red", "date": "2022-01-01"})
     multi_partition_key_mappings = [
         cast(MultiPartitionKey, partition_key).keys_by_dimension
         for partition_key in asset_partition_keys
