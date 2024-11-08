@@ -81,7 +81,7 @@ def table_writer(
                 partition_spec_update_mode=partition_spec_update_mode,
             )
     else:
-        table = catalog.create_table(
+        table = catalog.create_table_if_not_exists(
             table_path,
             schema=data.schema,
             properties=(
