@@ -100,7 +100,7 @@ class PartitionMapper:
                     if not isinstance(field.field_type, partition_types):
                         raise ValueError(
                             f"You have defined a static partition on column '{partition.partition_expr}'"
-                            f". But the table column type associated with this partition is 'str(field.field_type)'"
+                            f". But the table column type associated with this partition is '{str(field.field_type)}'"
                             f". Please cast the column to an appropriate type (e.g. string)."
                         )
                 else:
@@ -185,10 +185,10 @@ class PartitionMapper:
         """If time partitions present, check whether these have been updated.
         This happens when users change e.g. from an hourly to a daily partition."""
         # The assumption is that even a multi-partitioned table will have only one time partition
-        time_partition = next(iter(self.dagster_time_partitions))
-        time_partition_partitions = cast(TimeWindow, time_partition.partitions)
+        time_partition = next(iter(self.dagster_time_partitions), None)
         updated_field_name: str | None = None
         if time_partition is not None:
+            time_partition_partitions = cast(TimeWindow, time_partition.partitions)
             time_partition_transformation = diff_to_transformation(
                 time_partition_partitions.start, time_partition_partitions.end
             )
@@ -375,13 +375,14 @@ def partition_dimensions_to_filters(
     return partition_filters
 
 
-def partition_filter(table_partition: TablePartitionDimension) -> E.BooleanExpression:
+def partition_filter(
+    table_partition: TablePartitionDimension,
+) -> E.BooleanExpression | List[E.BooleanExpression]:
     partition = cast(Sequence[str], table_partition.partitions)
     if len(partition) > 1:
-        raise NotImplementedError(
-            f"Array partition values are not yet supported: '{str(T.StringType)}' / {partition}"
-        )
-    return E.EqualTo(table_partition.partition_expr, table_partition.partitions[0])  # type: ignore
+        return [E.EqualTo(table_partition.partition_expr, p) for p in partition]
+    else:
+        return E.EqualTo(table_partition.partition_expr, table_partition.partitions[0])  # type: ignore
 
 
 def time_window_partition_filter(

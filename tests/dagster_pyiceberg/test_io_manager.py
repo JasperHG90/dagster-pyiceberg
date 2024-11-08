@@ -28,6 +28,11 @@ def io_manager(
     )
 
 
+@pytest.fixture
+def custom_db_io_manager(io_manager: IcebergPyarrowIOManager):
+    return io_manager.create_io_manager(None)
+
+
 # NB: iceberg table identifiers are namespace + asset names (see below)
 @pytest.fixture(scope="function")
 def asset_b_df_table_identifier(namespace: str) -> str:
@@ -94,7 +99,9 @@ def daily_partitioned(context: AssetExecutionContext) -> pa.Table:
     key_prefix=["my_schema"],
     partitions_def=MultiPartitionsDefinition(
         partitions_defs={
-            "date": DailyPartitionsDefinition(start_date="2022-01-01"),
+            "date": DailyPartitionsDefinition(
+                start_date="2022-01-01", end_date="2022-01-10"
+            ),
             "category": StaticPartitionsDefinition(["a", "b", "c"]),
         }
     ),

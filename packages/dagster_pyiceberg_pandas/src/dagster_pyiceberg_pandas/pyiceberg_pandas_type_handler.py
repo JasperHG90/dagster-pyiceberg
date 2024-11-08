@@ -3,11 +3,11 @@ from typing import Optional, Sequence, Type
 import pandas as pd
 import pyarrow as pa
 from dagster._core.storage.db_io_manager import DbTypeHandler
+from dagster_pyiceberg import IcebergIOManager
 from dagster_pyiceberg.handler import (
     IcebergBaseArrowTypeHandler,
     IcebergPyArrowTypeHandler,
 )
-from dagster_pyiceberg.io_manager import IcebergIOManager
 from pyiceberg import table
 
 

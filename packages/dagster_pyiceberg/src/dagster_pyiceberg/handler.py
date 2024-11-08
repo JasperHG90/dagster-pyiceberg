@@ -49,7 +49,7 @@ class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
 
         # NB: not checking properties here, except for protected properties
         table_properties_usr = metadata.get("table_properties", {})
-        for k, v in table_properties_usr.items():
+        for k, _ in table_properties_usr.items():
             if k in ["created_by", "run_id"]:
                 raise KeyError(
                     f"Table properties cannot contain the following keys: {k}"

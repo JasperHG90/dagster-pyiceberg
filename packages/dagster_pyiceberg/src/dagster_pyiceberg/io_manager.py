@@ -22,12 +22,15 @@ from dagster._core.storage.db_io_manager import (
     TablePartitionDimension,
     TableSlice,
 )
+from dagster_pyiceberg._db_io_manager import CustomDbIOManager
+from dagster_pyiceberg.config import (  # noqa
+    IcebergRestCatalogConfig,
+    IcebergSqlCatalogConfig,
+)
+from dagster_pyiceberg.handler import CatalogTypes
 from pydantic import Field
 from pyiceberg.catalog.rest import RestCatalog
 from pyiceberg.catalog.sql import SqlCatalog
-
-from .config import IcebergRestCatalogConfig, IcebergSqlCatalogConfig  # noqa
-from .handler import CatalogTypes
 
 
 class PartitionSpecUpdateMode(enum.Enum):
@@ -38,6 +41,11 @@ class PartitionSpecUpdateMode(enum.Enum):
 class SchemaUpdateMode(enum.Enum):
     error = "error"
     update = "update"
+
+
+class DbIoManagerImplementation(enum.Enum):
+    default = "default"
+    custom = "custom"
 
 
 class _IcebergCatalogProperties(TypedDict):
@@ -191,6 +199,11 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
         default=SchemaUpdateMode.error,
         description="Logic to use when updating an iceberg table schema.",
     )
+    db_io_manager: DbIoManagerImplementation = Field(
+        default=DbIoManagerImplementation.default,
+        description="The implementation of the DbIOManager to use. 'default' uses the dagster default 'DbIOManager'."
+        " 'custom' uses the custom 'CustomDbIOManager' that allows you to use additional mappings. See <docs>.",
+    )
 
     @staticmethod
     @abstractmethod
@@ -202,7 +215,12 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
 
     def create_io_manager(self, context) -> DbIOManager:
         self.config.model_dump()
-        return DbIOManager(
+        IoManagerImplementation = (
+            DbIOManager
+            if self.db_io_manager == DbIoManagerImplementation.default
+            else CustomDbIOManager
+        )
+        return IoManagerImplementation(
             db_client=IcebergDbClient(),
             database="iceberg",
             schema=self.schema_,
