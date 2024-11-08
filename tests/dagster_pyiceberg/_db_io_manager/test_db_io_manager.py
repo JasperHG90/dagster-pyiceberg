@@ -1,5 +1,12 @@
 """
 We only support very specific cases of partition mappings
+
+TODO:
+- Non-partitioned to non-partitioned
+- Single partitioned to single partitioned
+- Single partitioned to non-partitioned
+- Multi-partitioned to non-partitioned
+- Non-partitioned to single partitioned
 """
 
 import datetime as dt

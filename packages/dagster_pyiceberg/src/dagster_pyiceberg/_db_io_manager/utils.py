@@ -20,11 +20,17 @@ class MultiTimePartitionsChecker:
 
     @property
     def start(self) -> dt.datetime:
-        return min([w.start for w in self._partitions])
+        date_ = min([w.start for w in self._partitions])
+        if not isinstance(date_, dt.datetime):
+            raise ValueError("Start date is not a datetime")
+        return date_
 
     @property
     def end(self) -> dt.datetime:
-        return max([w.end for w in self._partitions])
+        date_ = max([w.end for w in self._partitions])
+        if not isinstance(date_, dt.datetime):
+            raise ValueError("End date is not a datetime")
+        return date_
 
     @property
     def hourly_deltas(self) -> List[int]:
@@ -68,6 +74,7 @@ def generate_multi_partitions_dimension(
     asset_key: AssetKey,
 ) -> List[TablePartitionDimension]:
     partition_dimensions: List[TablePartitionDimension] = []
+    MultiPartitionKey(keys_by_dimension={"color": "red", "date": "2022-01-01"})
     multi_partition_key_mappings = [
         cast(MultiPartitionKey, partition_key).keys_by_dimension
         for partition_key in asset_partition_keys
