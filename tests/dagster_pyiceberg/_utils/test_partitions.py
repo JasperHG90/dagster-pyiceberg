@@ -16,10 +16,12 @@ from pyiceberg import types as T
 def test_time_window_partition_filter(
     datetime_table_partition_dimension: TablePartitionDimension,
 ):
-    expected_filter = [
-        E.GreaterThanOrEqual("timestamp", "2023-01-01T00:00:00"),
-        E.LessThan("timestamp", "2023-01-01T01:00:00"),
-    ]
+    expected_filter = E.And(
+        *[
+            E.GreaterThanOrEqual("timestamp", "2023-01-01T00:00:00"),
+            E.LessThan("timestamp", "2023-01-01T01:00:00"),
+        ]
+    )
     filter_ = partitions.time_window_partition_filter(
         datetime_table_partition_dimension, T.TimestampType
     )
@@ -35,7 +37,7 @@ def test_partition_filter(category_table_partition_dimension: TablePartitionDime
 def test_partition_filter_with_multiple(
     category_table_partition_dimension_multiple: TablePartitionDimension,
 ):
-    expected_filter = [E.EqualTo("category", "A"), E.EqualTo("category", "B")]
+    expected_filter = E.Or(*[E.EqualTo("category", "A"), E.EqualTo("category", "B")])
     filter_ = partitions.partition_filter(category_table_partition_dimension_multiple)
     assert filter_ == expected_filter
 
@@ -54,9 +56,38 @@ def test_partition_dimensions_to_filters(
         table_partition_spec=table_partitioned.spec(),
     )
     expected_filters = [
-        E.GreaterThanOrEqual("timestamp", "2023-01-01T00:00:00"),
-        E.LessThan("timestamp", "2023-01-01T01:00:00"),
+        E.And(
+            *[
+                E.GreaterThanOrEqual("timestamp", "2023-01-01T00:00:00"),
+                E.LessThan("timestamp", "2023-01-01T01:00:00"),
+            ]
+        ),
         E.EqualTo("category", "A"),
+    ]
+    assert filters == expected_filters
+
+
+def test_partition_dimensions_to_filters_multiple_categories(
+    datetime_table_partition_dimension: TablePartitionDimension,
+    category_table_partition_dimension_multiple: TablePartitionDimension,
+    table_partitioned: iceberg_table.Table,
+):
+    filters = partitions.partition_dimensions_to_filters(
+        partition_dimensions=[
+            datetime_table_partition_dimension,
+            category_table_partition_dimension_multiple,
+        ],
+        table_schema=table_partitioned.schema(),
+        table_partition_spec=table_partitioned.spec(),
+    )
+    expected_filters = [
+        E.And(
+            *[
+                E.GreaterThanOrEqual("timestamp", "2023-01-01T00:00:00"),
+                E.LessThan("timestamp", "2023-01-01T01:00:00"),
+            ]
+        ),
+        E.Or(*[E.EqualTo("category", "A"), E.EqualTo("category", "B")]),
     ]
     assert filters == expected_filters
 
