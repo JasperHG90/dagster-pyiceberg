@@ -2,10 +2,8 @@
 We only support very specific cases of partition mappings
 
 TODO:
-- Non-partitioned to non-partitioned
 - Single partitioned to single partitioned
 - Single partitioned to non-partitioned
-- Multi-partitioned to non-partitioned
 - Non-partitioned to single partitioned
 """
 
@@ -29,7 +27,6 @@ from dagster import (
     materialize,
 )
 from dagster_pyiceberg import IcebergPyarrowIOManager, IcebergSqlCatalogConfig
-from pyiceberg.catalog.sql import SqlCatalog
 
 
 @pytest.fixture
@@ -68,7 +65,26 @@ multi_partition_with_color = MultiPartitionsDefinition(
 )
 
 
-# Base case: we have multiple partitions
+@asset(
+    key_prefix=["my_schema"],
+)
+def asset_1() -> pa.Table:
+    return pa.Table.from_pydict(
+        {
+            "value": [1],
+            "b": [1],
+        }
+    )
+
+
+@asset(
+    key_prefix=["my_schema"],
+)
+def asset_2(asset_1: pa.Table) -> pa.Table:
+    return asset_1
+
+
+# case: we have multiple partitions
 @asset(
     key_prefix=["my_schema"],
     partitions_def=multi_partition_with_color,
@@ -106,6 +122,13 @@ def multi_partitioned_asset_1(context: AssetExecutionContext) -> pa.Table:
     },
 )
 def multi_partitioned_asset_2(multi_partitioned_asset_1: pa.Table) -> pa.Table:
+    return multi_partitioned_asset_1
+
+
+@asset(
+    key_prefix=["my_schema"],
+)
+def non_partitioned_asset(multi_partitioned_asset_1: pa.Table) -> pa.Table:
     return multi_partitioned_asset_1
 
 
@@ -183,8 +206,16 @@ def mapped_multi_partition(
     return table_
 
 
+def test_unpartitioned_asset_to_unpartitioned_asset(
+    io_manager: IcebergPyarrowIOManager,
+):
+    resource_defs = {"io_manager": io_manager}
+
+    res = materialize([asset_1, asset_2], resources=resource_defs)
+    assert res.success
+
+
 def test_multi_partitioned_to_multi_partitioned_asset(
-    catalog: SqlCatalog,
     io_manager: IcebergPyarrowIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
@@ -199,7 +230,6 @@ def test_multi_partitioned_to_multi_partitioned_asset(
 
 
 def test_multi_partitioned_to_single_partitioned_asset_colors(
-    catalog: SqlCatalog,
     io_manager: IcebergPyarrowIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
@@ -221,7 +251,6 @@ def test_multi_partitioned_to_single_partitioned_asset_colors(
 
 
 def test_multi_partitioned_to_single_partitioned_asset_dates(
-    catalog: SqlCatalog,
     io_manager: IcebergPyarrowIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
@@ -242,10 +271,29 @@ def test_multi_partitioned_to_single_partitioned_asset_dates(
     assert res.success
 
 
+def test_multi_partitioned_to_non_partitioned_asset(
+    io_manager: IcebergPyarrowIOManager,
+):
+    resource_defs = {"io_manager": io_manager}
+
+    for partition_key in ["red|2022-01-01", "red|2022-01-02", "red|2022-01-03"]:
+        res = materialize(
+            [multi_partitioned_asset_1],
+            partition_key=partition_key,
+            resources=resource_defs,
+        )
+        assert res.success
+    res = materialize(
+        [multi_partitioned_asset_1, non_partitioned_asset],
+        resources=resource_defs,
+        selection=[non_partitioned_asset],
+    )
+    assert res.success
+
+
 # Add: experimental warning to custom db io manager
 # Add: test with multiple partition selections not consecutive
 def test_multi_partitioned_to_multi_partitioned_with_different_dimensions(
-    catalog: SqlCatalog,
     io_manager: IcebergPyarrowIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
