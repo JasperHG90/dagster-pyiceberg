@@ -377,10 +377,10 @@ def partition_dimensions_to_filters(
 
 def partition_filter(
     table_partition: TablePartitionDimension,
-) -> E.BooleanExpression | List[E.BooleanExpression]:
+) -> E.BooleanExpression:
     partition = cast(Sequence[str], table_partition.partitions)
     if len(partition) > 1:
-        return [E.EqualTo(table_partition.partition_expr, p) for p in partition]
+        return E.Or(*[E.EqualTo(table_partition.partition_expr, p) for p in partition])
     else:
         return E.EqualTo(table_partition.partition_expr, table_partition.partitions[0])  # type: ignore
 
@@ -390,7 +390,7 @@ def time_window_partition_filter(
     iceberg_partition_spec_field_type: Union[
         T.DateType, T.TimestampType, T.TimeType, T.TimestamptzType
     ],
-) -> List[E.BooleanExpression]:
+) -> E.BooleanExpression:
     """Create an iceberg filter for a dagster time window partition
 
     Args:
@@ -412,7 +412,9 @@ def time_window_partition_filter(
         #  but dt.date.fromisoformat cannot parse dt.datetime.isoformat strings
         start_dt = start_dt.date()
         end_dt = end_dt.date()
-    return [
-        E.GreaterThanOrEqual(table_partition.partition_expr, start_dt.isoformat()),
-        E.LessThan(table_partition.partition_expr, end_dt.isoformat()),
-    ]
+    return E.And(
+        *[
+            E.GreaterThanOrEqual(table_partition.partition_expr, start_dt.isoformat()),
+            E.LessThan(table_partition.partition_expr, end_dt.isoformat()),
+        ]
+    )
