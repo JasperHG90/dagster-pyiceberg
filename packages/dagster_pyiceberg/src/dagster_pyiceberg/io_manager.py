@@ -22,12 +22,12 @@ from dagster._core.storage.db_io_manager import (
     TablePartitionDimension,
     TableSlice,
 )
+from dagster_pyiceberg._db_io_manager import CustomDbIOManager
 from dagster_pyiceberg.config import (  # noqa
     IcebergRestCatalogConfig,
     IcebergSqlCatalogConfig,
 )
 from dagster_pyiceberg.handler import CatalogTypes
-from dagster_pyiceberg.io_manager._db_io_manager import CustomDbIOManager
 from pydantic import Field
 from pyiceberg.catalog.rest import RestCatalog
 from pyiceberg.catalog.sql import SqlCatalog
