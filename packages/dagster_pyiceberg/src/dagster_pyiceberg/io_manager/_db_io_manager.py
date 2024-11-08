@@ -62,7 +62,7 @@ class MultiTimePartitionsChecker:
         )
 
 
-def parse_multi_asset_partitions_def(
+def generate_multi_partitions_dimension(
     asset_partition_keys: Sequence[str],
     asset_partitions_def: MultiPartitionsDefinition,
     partition_expr: Mapping[str, str],
@@ -93,31 +93,46 @@ def parse_multi_asset_partitions_def(
                 " column of the database contains data for the"
                 f" {part.name} partition."
             )
+        partitions_: TimeWindow | Sequence[str]
         if all(isinstance(partition, TimeWindow) for partition in partitions):
             checker = MultiTimePartitionsChecker(
                 partitions=cast(List[TimeWindow], partitions)
             )
             if not checker.is_consecutive():
                 raise ValueError("Dates are not consecutive.")
-            partition_dimensions.append(
-                TablePartitionDimension(
-                    partition_expr=cast(str, partition_expr_str),
-                    partitions=TimeWindow(
-                        start=checker.start,
-                        end=checker.end,
-                    ),
-                )
+            partitions_ = TimeWindow(
+                start=checker.start,
+                end=checker.end,
             )
         elif all(isinstance(partition, str) for partition in partitions):
-            partition_dimensions.append(
-                TablePartitionDimension(
-                    partition_expr=cast(str, partition_expr_str),
-                    partitions=list(set(cast(List[str], partitions))),
-                )
-            )
+            partitions_ = list(set(partitions))
         else:
             raise ValueError("Unknown partition type")
+        partition_dimensions.append(
+            TablePartitionDimension(
+                partition_expr=cast(str, partition_expr_str), partitions=partitions_
+            )
+        )
     return partition_dimensions
+
+
+def generate_single_partition_dimension(
+    partition_expr: str,
+    asset_partition_keys: Sequence[str],
+    asset_partitions_time_window: TimeWindow | None,
+) -> TablePartitionDimension:
+    partition_dimension: TablePartitionDimension
+    if isinstance(asset_partitions_time_window, TimeWindow):
+        partition_dimension = TablePartitionDimension(
+            partition_expr=partition_expr,
+            partitions=(asset_partitions_time_window if asset_partition_keys else []),
+        )
+    else:
+        partition_dimension = TablePartitionDimension(
+            partition_expr=partition_expr,
+            partitions=asset_partition_keys,
+        )
+    return partition_dimension
 
 
 class CustomDbIOManager(DbIOManager):
@@ -169,33 +184,27 @@ class CustomDbIOManager(DbIOManager):
                         " specify a column, set this metadata value. E.g."
                         ' @asset(metadata={"partition_expr": "your_partition_column"}).'
                     )
-
                 if isinstance(context.asset_partitions_def, MultiPartitionsDefinition):
-                    for partition_dimension in parse_multi_asset_partitions_def(
-                        context.asset_partition_keys,
-                        context.asset_partitions_def,
-                        cast(Mapping[str, str], partition_expr),
-                        context.asset_key,
+                    for partition_dimension in generate_multi_partitions_dimension(
+                        asset_partition_keys=context.asset_partition_keys,
+                        asset_partitions_def=context.asset_partitions_def,
+                        partition_expr=cast(Mapping[str, str], partition_expr),
+                        asset_key=context.asset_key,
                     ):
                         partition_dimensions.append(partition_dimension)
-                elif isinstance(
-                    context.asset_partitions_def, TimeWindowPartitionsDefinition
-                ):
-                    partition_dimensions.append(
-                        TablePartitionDimension(
-                            partition_expr=cast(str, partition_expr),
-                            partitions=(
-                                context.asset_partitions_time_window
-                                if context.asset_partition_keys
-                                else []
-                            ),
-                        )
-                    )
                 else:
                     partition_dimensions.append(
-                        TablePartitionDimension(
+                        generate_single_partition_dimension(
                             partition_expr=cast(str, partition_expr),
-                            partitions=context.asset_partition_keys,
+                            asset_partition_keys=context.asset_partition_keys,
+                            asset_partitions_time_window=(
+                                context.asset_partitions_time_window
+                                if isinstance(
+                                    context.asset_partitions_def,
+                                    TimeWindowPartitionsDefinition,
+                                )
+                                else None
+                            ),
                         )
                     )
         else:
@@ -206,6 +215,9 @@ class CustomDbIOManager(DbIOManager):
                 schema = self._schema
             else:
                 schema = "public"
+
+        if isinstance(context, InputContext):
+            1 == 1
 
         return TableSlice(
             table=table,
