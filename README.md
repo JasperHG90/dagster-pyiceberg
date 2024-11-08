@@ -17,3 +17,9 @@ Documentation can be found [here](https://jasperhg90.github.io/dagster-pyiceberg
 ## Installation
 
 See [Installing dagster-pyiceberg](https://jasperhg90.github.io/dagster-pyiceberg/installation/).
+
+## Examples
+
+See:
+
+- [example with postgresql catalog backend](https://github.com/JasperHG90/dagster-pyiceberg-example-postgres)
