@@ -42,8 +42,13 @@ class MultiTimePartitionsChecker:
         return deltas
 
     @property
-    def hourly_delta(self) -> int | None:
-        return next(iter(set(self.hourly_deltas)), None)
+    def hourly_delta(self) -> int:
+        try:
+            return next(iter(set(self.hourly_deltas)))
+        except StopIteration:
+            raise ValueError(
+                "TimeWindowPartitionsDefinition must have at least one partition"
+            )
 
     def is_consecutive(self):
         return (
