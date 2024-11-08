@@ -1,4 +1,4 @@
-from typing import Dict, List, Mapping, Union, cast  # noqa
+from typing import Any, Dict, List, Mapping, Union, cast  # noqa
 
 from dagster import (
     InputContext,
@@ -6,6 +6,7 @@ from dagster import (
     OutputContext,
     TimeWindowPartitionsDefinition,
 )
+from dagster._core.definitions.metadata import ArbitraryMetadataMapping
 from dagster._core.storage.db_io_manager import (
     DbIOManager,
     TablePartitionDimension,
@@ -32,7 +33,7 @@ class CustomDbIOManager(DbIOManager):
     def _get_schema(
         self,
         context: Union[OutputContext, InputContext],
-        output_context_metadata: Dict[str, str],
+        output_context_metadata: ArbitraryMetadataMapping | Dict[str, Any],
     ) -> str:
         asset_key_path = context.asset_key.path
         # schema order of precedence: metadata, I/O manager 'schema' config, key_prefix
@@ -98,9 +99,6 @@ class CustomDbIOManager(DbIOManager):
                 schema = self._schema
             else:
                 schema = "public"
-
-        if isinstance(context, InputContext):
-            1 == 1
 
         return TableSlice(
             table=table,

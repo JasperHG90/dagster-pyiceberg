@@ -68,7 +68,7 @@ class MultiTimePartitionsChecker:
 
 
 def generate_multi_partitions_dimension(
-    asset_partition_keys: Sequence[MultiPartitionKey],
+    asset_partition_keys: Sequence[str],
     asset_partitions_def: MultiPartitionsDefinition,
     partition_expr: Mapping[str, str],
     asset_key: AssetKey,
@@ -110,7 +110,7 @@ def generate_multi_partitions_dimension(
                 end=checker.end,
             )
         elif all(isinstance(partition, str) for partition in partitions):
-            partitions_ = list(set(partitions))
+            partitions_ = list(set(cast(List[str], partitions)))
         else:
             raise ValueError("Unknown partition type")
         partition_dimensions.append(
