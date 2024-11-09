@@ -8,6 +8,8 @@ from dagster_pyiceberg._utils.partitions import (
 )
 from dagster_pyiceberg._utils.retries import PyIcebergOperationWithRetry
 from dagster_pyiceberg._utils.schema import update_table_schema
+from dagster_pyiceberg.version import __version__ as dagster_pyiceberg_version
+from pyiceberg import __version__ as iceberg_version
 from pyiceberg import expressions as E
 from pyiceberg import table
 from pyiceberg import table as iceberg_table
@@ -48,7 +50,12 @@ def table_writer(
             the table partition spec.
     """
     table_path = f"{table_slice.schema}.{table_slice.table}"
-    base_properties = {"created_by": "dagster", "dagster_run_id": dagster_run_id}
+    base_properties = {
+        "created-by": "dagster",
+        "dagster-run-id": dagster_run_id,
+        "pyiceberg-version": iceberg_version,
+        "dagster-pyiceberg-version": dagster_pyiceberg_version,
+    }
     # In practice, partition_dimensions is an empty list for unpartitioned assets and not None
     #  even though it's the default value.
     partition_exprs: List[str] | None = None
@@ -114,7 +121,7 @@ def table_writer(
         data=data,
         overwrite_filter=row_filter,
         snapshot_properties=(
-            base_properties | {"dagster_partition_key": dagster_partition_key}
+            base_properties | {"dagster-partition-key": dagster_partition_key}
             if dagster_partition_key is not None
             else base_properties
         ),
