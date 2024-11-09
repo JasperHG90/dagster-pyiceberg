@@ -56,14 +56,14 @@ def test_table_writer(namespace: str, catalog: SqlCatalog, data: pa.Table):
     )
     assert catalog.table_exists(identifier_)
     table = catalog.load_table(identifier_)
-    assert table.properties["dagster_run_id"] == "hfkghdgsh467374828"
-    assert table.properties["created_by"] == "dagster"
+    assert table.properties["dagster-run-id"] == "hfkghdgsh467374828"
+    assert table.properties["created-by"] == "dagster"
     assert (
-        table.current_snapshot().summary.additional_properties["dagster_run_id"]
+        table.current_snapshot().summary.additional_properties["dagster-run-id"]
         == "hfkghdgsh467374828"
     )
     assert (
-        table.current_snapshot().summary.additional_properties["created_by"]
+        table.current_snapshot().summary.additional_properties["created-by"]
         == "dagster"
     )
 
