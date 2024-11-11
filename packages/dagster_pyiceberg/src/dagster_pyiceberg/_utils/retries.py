@@ -22,10 +22,13 @@ class PyIcebergOperationWithRetry(metaclass=ABCMeta):
     @abstractmethod
     def operation(self, *args, **kwargs): ...
 
+    def refresh(self):
+        self.table.refresh()
+
     def execute(
         self,
         retries: int,
-        exception_types: type[BaseException] | Tuple[type[BaseException]],
+        exception_types: type[BaseException] | Tuple[type[BaseException], ...],
         *args,
         **kwargs,
     ):
@@ -44,7 +47,7 @@ class PyIcebergOperationWithRetry(metaclass=ABCMeta):
                     except exception_types as e:
                         # Do not refresh on the final try
                         if retry.retry_state.attempt_number < retries:
-                            self.table.refresh()
+                            self.refresh()
                         raise e
         except RetryError as e:
             raise PyIcebergOperationException(
