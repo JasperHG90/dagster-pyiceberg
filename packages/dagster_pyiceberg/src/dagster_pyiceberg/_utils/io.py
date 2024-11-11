@@ -15,7 +15,7 @@ from pyiceberg import table
 from pyiceberg import table as iceberg_table
 from pyiceberg.catalog.rest import RestCatalog
 from pyiceberg.catalog.sql import SqlCatalog
-from pyiceberg.exceptions import CommitFailedException
+from pyiceberg.exceptions import CommitFailedException, TableAlreadyExistsError
 from pyiceberg.partitioning import PartitionSpec
 from pyiceberg.schema import Schema
 
@@ -88,8 +88,9 @@ def table_writer(
                 partition_spec_update_mode=partition_spec_update_mode,
             )
     else:
-        table = catalog.create_table_if_not_exists(
-            table_path,
+        table = create_table_if_not_exists(
+            catalog=catalog,
+            table_path=table_path,
             schema=data.schema,
             properties=(
                 table_properties | base_properties
@@ -169,6 +170,50 @@ def get_row_filter(
         if len(partition_filters) > 1
         else partition_filters[0]
     )
+
+
+def create_table_if_not_exists(
+    catalog: CatalogTypes,
+    table_path: str,
+    schema: pa.Schema,
+    properties: Dict[str, str],
+) -> table.Table:
+    """Creates an iceberg table and retries on failure
+
+    Args:
+        catalog (CatalogTypes): PyIceberg catalogs supported by this library
+        table_path (str): Table path
+        schema (pa.Schema): PyArrow schema
+        properties (Dict[str, str]): Table properties
+
+    Raises:
+        RetryError: Raised when the commit fails after the maximum number of retries
+    """
+    PyIcebergCreateTableIfNotExistsWithRetry(catalog=catalog).execute(
+        retries=3,
+        exception_types=(CommitFailedException, TableAlreadyExistsError),
+        table_path=table_path,
+        schema=schema,
+        properties=properties,
+    )
+    return catalog.load_table(table_path)
+
+
+class PyIcebergCreateTableIfNotExistsWithRetry(PyIcebergOperationWithRetry):
+
+    def __init__(self, catalog: CatalogTypes):
+        self.catalog = catalog
+
+    def refresh(self):
+        """Not using this method because we don't have a table to refresh"""
+        ...
+
+    def operation(self, table_path: str, schema: pa.Schema, properties: Dict[str, str]):
+        self.catalog.create_table_if_not_exists(
+            table_path,
+            schema=schema,
+            properties=properties,
+        )
 
 
 def overwrite_table(
