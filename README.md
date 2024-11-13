@@ -2,7 +2,7 @@
 
 > ⚠️ Under construction
 
-Dagster IO manager for managing [Iceberg](https://iceberg.apache.org/) tables with [PyIceberg](https://github.com/apache/iceberg-python).
+[Dagster](https://dagster.io/) IO manager for managing [Iceberg](https://iceberg.apache.org/) tables with [PyIceberg](https://github.com/apache/iceberg-python).
 
 This implementation is based on the [dagster-deltalake](https://github.com/dagster-io/dagster/tree/master/python_modules/libraries/dagster-deltalake) IO manager.
 
