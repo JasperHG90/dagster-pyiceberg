@@ -170,11 +170,7 @@ class IcebergPolarsTypeHandler(IcebergBaseTypeHandler[PolarsTypes]):
         stmt = f"SELECT {selected_fields} FROM self"
         if row_filter is not None:
             stmt += f"\nWHERE {row_filter}"
-
-        if target_type == pl.LazyFrame:
-            return pdf.sql(stmt)
-        else:
-            return pdf.sql(stmt).collect()
+        return pdf.sql(stmt) if target_type == pl.LazyFrame else pdf.sql(stmt).collect()
 
     def to_arrow(self, obj: PolarsTypes) -> pa.Table:
         if isinstance(obj, pl.LazyFrame):
