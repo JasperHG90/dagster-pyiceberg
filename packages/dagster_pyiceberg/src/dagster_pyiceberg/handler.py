@@ -208,8 +208,8 @@ class IcebergDaftTypeHandler(IcebergBaseTypeHandler[da.DataFrame]):
         return da.sql(stmt)
 
     def to_arrow(self, obj: da.DataFrame) -> pa.Table:
-        obj.to_arrow()
+        return obj.to_arrow()
 
     @property
     def supported_types(self) -> Sequence[Type[object]]:
-        return (pl.LazyFrame, pl.DataFrame)
+        return [da.DataFrame]
