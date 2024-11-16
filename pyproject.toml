@@ -1,29 +1,46 @@
 [project]
-name = "dagster-pyiceberg-project"
+name = "dagster-pyiceberg"
 version = "0.0.0"
-description = "Libraries that provide Dagster IO managers for PyIceberg."
+description = "Package for PyIceberg-specific Dagster framework op and resource components."
 authors = [
   {name="Jasper Ginn", email="jasperginn@gmail.com"}
 ]
 requires-python = ">=3.10"
 readme = "README.md"
 dependencies = [
-    "getdaft>=0.3.13",
+    "pyiceberg[pyarrow]>=0.7.1",
+    "dagster>=1.8.2",
+    "pendulum>=3.0.0",
+    "tenacity>=8.5.0",
 ]
-
-[tool.uv]
-default-groups = ["dev", "docs"]
-package = false
-
-[tool.uv.workspace]
-members = [
-  "packages/*"
+maintainers = [
+  {name="Jasper Ginn", email="jasperginn@gmail.com"}
+]
+license = {file = "LICENSE.txt"}
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12"
 ]
 
 [tool.uv.sources]
-dagster_pyiceberg = { workspace = true }
-dagster_pyiceberg_pandas = { workspace = true }
-dagster_pyiceberg_polars = { workspace = true }
+pyiceberg = { git = "https://github.com/apache/iceberg-python", rev = "0cebec4" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.urls]
+Homepage = "https://jasperhg90.github.io/dagster-pyiceberg/"
+Documentation = "https://jasperhg90.github.io/dagster-pyiceberg/"
+Repository = "https://github.com/JasperHG90/dagster-pyiceberg"
+"Bug Tracker" = "https://github.com/JasperHG90/dagster-pyiceberg/issues"
 
 [tool.black]
 line-length = 88
@@ -85,11 +102,6 @@ docs = [
     "mkdocstrings[python]>=0.26.2",
 ]
 dev = [
-    # These are added as dev dependencies becuase they should be available
-    #  when developing the project.
-    "dagster_pyiceberg",
-    "dagster_pyiceberg_pandas",
-    "dagster_pyiceberg_polars",
     # END WORKSPACE_PACKAGES
     "pre-commit>=3.8.0",
     "ipykernel>=6.29.5",

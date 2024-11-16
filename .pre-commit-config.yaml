@@ -18,7 +18,7 @@ repos:
     rev: "1.7.0"
     hooks:
       - id: interrogate
-        args: [-vv, --fail-under=0, ./packages]
+        args: [-vv, --fail-under=0, ./src]
 
   - repo: https://github.com/ambv/black
     rev: 24.1.1
