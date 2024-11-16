@@ -107,7 +107,6 @@ docs = [
     "mkdocstrings[python]>=0.26.2",
 ]
 dev = [
-    # END WORKSPACE_PACKAGES
     "pre-commit>=3.8.0",
     "ipykernel>=6.29.5",
     "pytest>=8.3.2",
@@ -115,6 +114,5 @@ dev = [
     "pytest-coverage>=0.0",
     "testcontainers[postgres]>=4.8.2",
     "psycopg2-binary>=2.9.10",
-    #"cachetools>=5.5.0",
     "dagit>=1.8.8",
 ]
