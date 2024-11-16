@@ -4,6 +4,7 @@ NB: This snippet assumes that an iceberg table called 'ingested_data' exists.
 
 import pandas as pd
 from dagster import Definitions, asset
+
 from dagster_pyiceberg import IcebergSqlCatalogConfig, IcebergTableResource
 
 CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/catalog.db"

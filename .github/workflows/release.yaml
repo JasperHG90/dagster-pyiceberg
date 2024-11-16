@@ -26,7 +26,6 @@ jobs:
         with:
           python_version: '3.11'
           uv_version: '0.4.27'
-          path_to_packages: './packages'
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:

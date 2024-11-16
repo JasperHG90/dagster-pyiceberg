@@ -1,7 +1,8 @@
 import pandas as pd
 from dagster import Definitions, StaticPartitionsDefinition, asset
-from dagster_pyiceberg import IcebergSqlCatalogConfig
 from dagster_pyiceberg_pandas import IcebergPandasIOManager
+
+from dagster_pyiceberg import IcebergSqlCatalogConfig
 
 CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/catalog.db"
 CATALOG_WAREHOUSE = "file:///home/vscode/workspace/.tmp/examples/warehouse"
