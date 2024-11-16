@@ -108,7 +108,7 @@ def table_writer(
 
     row_filter: E.BooleanExpression
     if partition_dimensions is not None:
-        row_filter = get_row_filter(
+        row_filter = get_expression_row_filter(
             iceberg_table_schema=table.schema(),
             iceberg_partition_spec=table.spec(),
             dagster_partition_dimensions=partition_dimensions,
@@ -143,7 +143,7 @@ def table_reader(
     )
     row_filter: E.BooleanExpression
     if table_slice.partition_dimensions:
-        row_filter = get_row_filter(
+        row_filter = get_expression_row_filter(
             iceberg_table_schema=table.schema(),
             iceberg_partition_spec=table.spec(),
             dagster_partition_dimensions=table_slice.partition_dimensions,
@@ -154,7 +154,7 @@ def table_reader(
     return table.scan(row_filter=row_filter, selected_fields=selected_fields)
 
 
-def get_row_filter(
+def get_expression_row_filter(
     iceberg_table_schema: Schema,
     iceberg_partition_spec: PartitionSpec,
     dagster_partition_dimensions: Sequence[TablePartitionDimension],
