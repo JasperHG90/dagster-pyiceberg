@@ -1,6 +1,18 @@
 import datetime as dt
 import itertools
-from typing import Dict, Iterable, List, Optional, Sequence, Set, Union, cast
+from abc import abstractmethod
+from typing import (
+    Dict,
+    Generic,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
@@ -16,6 +28,198 @@ from pyiceberg.transforms import IdentityTransform
 
 time_partition_dt_types = (T.TimestampType, T.DateType)
 partition_types = T.StringType
+
+K = TypeVar("K")
+
+
+class DagsterPartitionToPredicateMapper(Generic[K]):
+
+    def __init__(
+        self,
+        partition_dimensions: Iterable[TablePartitionDimension],
+        table_schema: Schema,
+        table_partition_spec: Optional[PartitionSpec] = None,
+    ):
+        self.partition_dimensions = partition_dimensions
+        self.table_schema = table_schema
+        self.table_partition_spec = table_partition_spec
+
+    def _map_partition_spec_to_fields(self):
+        """Maps partition spec to fields"""
+        partition_spec_fields = {}
+        for field in cast(PartitionSpec, self.table_partition_spec).fields:
+            field_name = next(
+                iter(
+                    [
+                        column.name
+                        for column in self.table_schema.fields
+                        if column.field_id == field.source_id
+                    ]
+                )
+            )
+            partition_spec_fields[field.source_id] = field_name
+        return partition_spec_fields
+
+    @abstractmethod
+    def _partition_filters_to_predicates(
+        self, partition_expr: str, partition_filters: Sequence[str]
+    ) -> K: ...
+
+    @abstractmethod
+    def _time_window_partition_filters_to_predicates(
+        self,
+        partition_expr: str,
+        start_dt: Union[dt.date, dt.datetime],
+        end_dt: Union[dt.date, dt.datetime],
+    ) -> K: ...
+
+    def _partition_filter(
+        self,
+        table_partition: TablePartitionDimension,
+    ) -> K:
+        return self._partition_filters_to_predicates(
+            partition_expr=table_partition.partition_expr,
+            partition_filters=cast(Sequence[str], table_partition.partitions),
+        )
+
+    def _time_window_partition_filter(
+        self,
+        table_partition: TablePartitionDimension,
+        iceberg_partition_spec_field_type: Union[
+            T.DateType, T.TimestampType, T.TimeType, T.TimestamptzType
+        ],
+    ) -> K:
+        """Create an iceberg filter for a dagster time window partition
+
+        Args:
+            table_partition (TablePartitionDimension): Dagster time window partition
+            iceberg_partition_spec_field_type (Union[T.DateType, T.TimestampType, T.TimeType, T.TimestamptzType]): Iceberg field type
+            required to correctly format the partition values
+
+        Returns:
+            List[E.BooleanExpression]: List of iceberg filters with start and end dates
+        """
+        partition = cast(TimeWindow, table_partition.partitions)
+        start_dt, end_dt = partition
+        if isinstance(start_dt, dt.datetime):
+            start_dt = start_dt.replace(tzinfo=None)
+            end_dt = end_dt.replace(tzinfo=None)
+        if isinstance(iceberg_partition_spec_field_type, T.DateType):
+            # Internally, PyIceberg uses dt.date.fromisoformat to parse dates.
+            #  Dagster will pass dt.datetime objects in time window partitions.
+            #  but dt.date.fromisoformat cannot parse dt.datetime.isoformat strings
+            start_dt = start_dt.date()
+            end_dt = end_dt.date()
+        return self._time_window_partition_filters_to_predicates(
+            partition_expr=table_partition.partition_expr,
+            start_dt=start_dt,
+            end_dt=end_dt,
+        )
+
+    def partition_dimensions_to_filters(self) -> List[K]:
+        """Converts dagster partitions to iceberg filters"""
+        predicates = []
+        partition_spec_fields: Optional[Dict[int, str]] = None
+        if self.table_partition_spec is not None:  # Only None when writing new tables
+            partition_spec_fields = self._map_partition_spec_to_fields()
+        for partition_dimension in self.partition_dimensions:
+            field = self.table_schema.find_field(partition_dimension.partition_expr)
+            if partition_spec_fields is not None:
+                if field.field_id not in partition_spec_fields.keys():
+                    raise ValueError(
+                        f"Table is not partitioned by field '{field.name}' with id"
+                        f"'{field.field_id}'. Available partition fields: "
+                        f"{partition_spec_fields}"
+                    )
+            # TODO: add timestamp tz type and time type
+            predicate_: K
+            if isinstance(field.field_type, time_partition_dt_types):
+                predicate_ = self._time_window_partition_filter(
+                    table_partition=partition_dimension,
+                    iceberg_partition_spec_field_type=field.field_type,
+                )
+            elif isinstance(field.field_type, partition_types):
+                predicate_ = self._partition_filter(table_partition=partition_dimension)
+            else:
+                raise ValueError(
+                    f"Partitioning by field type '{str(field.field_type)}' not supported"
+                )
+            predicates.append(predicate_)
+        return predicates
+
+
+class DagsterPartitionToPyIcebergExpressionMapper(
+    DagsterPartitionToPredicateMapper[E.BooleanExpression]
+):
+
+    def _partition_filters_to_predicates(
+        self, partition_expr: str, partition_filters: Sequence[str]
+    ) -> E.BooleanExpression | E.LiteralPredicate[str]:
+        predicates = [E.EqualTo(partition_expr, p) for p in partition_filters]
+        if len(predicates) > 1:
+            return E.Or(*predicates)
+        else:
+            return predicates[0]
+
+    def _time_window_partition_filters_to_predicates(
+        self,
+        partition_expr: str,
+        start_dt: Union[dt.date, dt.datetime],
+        end_dt: Union[dt.date, dt.datetime],
+    ) -> E.BooleanExpression:
+        return E.And(
+            *[
+                E.GreaterThanOrEqual(partition_expr, start_dt.isoformat()),
+                E.LessThan(partition_expr, end_dt.isoformat()),
+            ]
+        )
+
+
+class DagsterPartitionToSqlPredicateMapper(DagsterPartitionToPredicateMapper[str]):
+
+    def _partition_filters_to_predicates(
+        self, partition_expr: str, partition_filters: Sequence[str]
+    ) -> str:
+        predicates = [f"{partition_expr} = '{p}'" for p in partition_filters]
+        if len(predicates) > 1:
+            return f"({' OR '.join(predicates)})"
+        else:
+            return predicates[0]
+
+    @abstractmethod
+    def _time_window_partition_filters_to_predicates(
+        self,
+        partition_expr: str,
+        start_dt: Union[dt.date, dt.datetime],
+        end_dt: Union[dt.date, dt.datetime],
+    ) -> str: ...
+
+
+class DagsterPartitionToPolarsSqlPredicateMapper(DagsterPartitionToSqlPredicateMapper):
+
+    def _time_window_partition_filters_to_predicates(
+        self,
+        partition_expr: str,
+        start_dt: Union[dt.date, dt.datetime],
+        end_dt: Union[dt.date, dt.datetime],
+    ) -> str:
+        return f"{partition_expr} >= '{start_dt.isoformat()}' AND {partition_expr} < '{end_dt.isoformat()}'"
+
+
+class DagsterPartitionToDaftSqlPredicateMapper(DagsterPartitionToSqlPredicateMapper):
+
+    def _time_window_partition_filters_to_predicates(
+        self,
+        partition_expr: str,
+        start_dt: Union[dt.date, dt.datetime],
+        end_dt: Union[dt.date, dt.datetime],
+    ) -> str:
+        # See https://docs.rs/chrono/latest/chrono/format/strftime/index.html
+        parse_fmt = "%+" if isinstance(start_dt, dt.datetime) else "%F"
+        return (
+            f"{partition_expr} >= to_date('{start_dt.isoformat()}', '{parse_fmt}') "
+            f"AND {partition_expr} < to_date('{end_dt.isoformat()}', '{parse_fmt}')"
+        )
 
 
 def update_table_partition_spec(
