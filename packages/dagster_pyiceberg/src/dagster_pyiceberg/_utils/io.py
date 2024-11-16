@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Union
 
 import pyarrow as pa
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
@@ -126,32 +126,6 @@ def table_writer(
             else base_properties
         ),
     )
-
-
-def table_reader(
-    table_slice: TableSlice, catalog: CatalogTypes
-) -> iceberg_table.DataScan:
-    """Reads a table slice from an iceberg table and slices it according to partitioning (if present)"""
-    if table_slice.partition_dimensions is None:
-        raise ValueError(
-            "Partition dimensions are not set. Please set the 'partition_dimensions' field in the TableSlice."
-        )
-    table_name = f"{table_slice.schema}.{table_slice.table}"
-    table = catalog.load_table(table_name)
-    selected_fields: Tuple[str, ...] = (
-        tuple(table_slice.columns) if table_slice.columns is not None else ("*",)
-    )
-    row_filter: E.BooleanExpression
-    if table_slice.partition_dimensions:
-        row_filter = get_expression_row_filter(
-            iceberg_table_schema=table.schema(),
-            iceberg_partition_spec=table.spec(),
-            dagster_partition_dimensions=table_slice.partition_dimensions,
-        )
-    else:
-        row_filter = iceberg_table.ALWAYS_TRUE
-
-    return table.scan(row_filter=row_filter, selected_fields=selected_fields)
 
 
 def get_expression_row_filter(
