@@ -11,12 +11,10 @@ from dagster_pyiceberg._utils import (
     DagsterPartitionToDaftSqlPredicateMapper,
     DagsterPartitionToPolarsSqlPredicateMapper,
     DagsterPartitionToPyIcebergExpressionMapper,
-    table_reader,
     table_writer,
 )
 from pyiceberg import expressions as E
 from pyiceberg import table as ibt
-from pyiceberg.table import DataScan
 from pyiceberg.table.snapshots import Snapshot
 
 U = TypeVar("U")
@@ -215,96 +213,3 @@ class IcebergDaftTypeHandler(IcebergBaseTypeHandler[da.DataFrame]):
     @property
     def supported_types(self) -> Sequence[Type[object]]:
         return (pl.LazyFrame, pl.DataFrame)
-
-
-class IcebergBaseArrowTypeHandler(DbTypeHandler[U], Generic[U]):
-    """
-    Base class for PyIceberg type handlers
-
-    To implement a new type handler (e.g. pandas), subclass this class and implement
-    the `from_arrow` and `to_arrow` methods. These methods convert between the target
-    type (e.g. pandas DataFrame) and pyarrow Table. You must also declare a property
-    `supported_types` that lists the types that the handler supports.
-    See `IcebergPyArrowTypeHandler` for an example.
-
-    Target types are determined in the user code by type annotating the output of
-    a dagster asset.
-    """
-
-    @abstractmethod
-    def from_arrow(self, obj: DataScan, target_type: type) -> U: ...
-
-    # TODO: deltalake uses record batch reader, as `write_deltalake` takes this as
-    #  an input, see <https://delta-io.github.io/delta-rs/api/delta_writer/>
-    #  but this is not supported by pyiceberg I think. We need to check this.
-    @abstractmethod
-    def to_arrow(self, obj: U) -> pa.Table: ...
-
-    def handle_output(
-        self,
-        context: OutputContext,
-        table_slice: TableSlice,
-        obj: U,
-        connection: CatalogTypes,
-    ):
-        """Stores pyarrow types in Iceberg table"""
-        metadata = context.definition_metadata or {}  # noqa
-        resource_config = context.resource_config or {}
-
-        # NB: not checking properties here, except for protected properties
-        table_properties_usr = metadata.get("table_properties", {})
-        for k, _ in table_properties_usr.items():
-            if k in ["created_by", "run_id"]:
-                raise KeyError(
-                    f"Table properties cannot contain the following keys: {k}"
-                )
-
-        partition_spec_update_mode = cast(
-            str, resource_config["partition_spec_update_mode"]
-        )
-        schema_update_mode = cast(str, resource_config["schema_update_mode"])
-
-        data = self.to_arrow(obj)
-
-        table_writer(
-            table_slice=table_slice,
-            data=data,
-            catalog=connection,
-            partition_spec_update_mode=partition_spec_update_mode,
-            schema_update_mode=schema_update_mode,
-            dagster_run_id=context.run_id,
-            dagster_partition_key=(
-                context.partition_key if context.has_asset_partitions else None
-            ),
-            table_properties=table_properties_usr,
-        )
-
-        table_ = connection.load_table(f"{table_slice.schema}.{table_slice.table}")
-
-        current_snapshot = cast(Snapshot, table_.current_snapshot())
-
-        context.add_output_metadata(
-            {
-                "table_columns": MetadataValue.table_schema(
-                    TableSchema(
-                        columns=[
-                            TableColumn(name=f["name"], type=str(f["type"]))
-                            for f in table_.schema().model_dump()["fields"]
-                        ]
-                    )
-                ),
-                **current_snapshot.model_dump(),
-            }
-        )
-
-    def load_input(
-        self,
-        context: InputContext,
-        table_slice: TableSlice,
-        connection: CatalogTypes,
-    ) -> U:
-        """Loads the input as a pyarrow Table"""
-        return self.from_arrow(
-            table_reader(table_slice=table_slice, catalog=connection),
-            context.dagster_type.typing_type,
-        )
