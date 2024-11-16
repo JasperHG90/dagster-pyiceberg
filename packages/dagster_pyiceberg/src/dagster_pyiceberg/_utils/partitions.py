@@ -44,22 +44,6 @@ class DagsterPartitionToPredicateMapper(Generic[K]):
         self.table_schema = table_schema
         self.table_partition_spec = table_partition_spec
 
-    def _map_partition_spec_to_fields(self):
-        """Maps partition spec to fields"""
-        partition_spec_fields = {}
-        for field in cast(PartitionSpec, self.table_partition_spec).fields:
-            field_name = next(
-                iter(
-                    [
-                        column.name
-                        for column in self.table_schema.fields
-                        if column.field_id == field.source_id
-                    ]
-                )
-            )
-            partition_spec_fields[field.source_id] = field_name
-        return partition_spec_fields
-
     @abstractmethod
     def _partition_filters_to_predicates(
         self, partition_expr: str, partition_filters: Sequence[str]
@@ -121,7 +105,9 @@ class DagsterPartitionToPredicateMapper(Generic[K]):
         predicates = []
         partition_spec_fields: Optional[Dict[int, str]] = None
         if self.table_partition_spec is not None:  # Only None when writing new tables
-            partition_spec_fields = self._map_partition_spec_to_fields()
+            partition_spec_fields = map_partition_spec_to_fields(
+                partition_spec=self.table_partition_spec, table_schema=self.table_schema
+            )
         for partition_dimension in self.partition_dimensions:
             field = self.table_schema.find_field(partition_dimension.partition_expr)
             if partition_spec_fields is not None:
@@ -537,88 +523,3 @@ def map_partition_spec_to_fields(partition_spec: PartitionSpec, table_schema: Sc
         )
         partition_spec_fields[field.source_id] = field_name
     return partition_spec_fields
-
-
-def partition_dimensions_to_filters(
-    partition_dimensions: Iterable[TablePartitionDimension],
-    table_schema: Schema,
-    table_partition_spec: Optional[PartitionSpec] = None,
-) -> List[E.BooleanExpression]:
-    """Converts dagster partitions to iceberg filters"""
-    partition_filters = []
-    partition_spec_fields: Optional[Dict[int, str]] = None
-    if table_partition_spec is not None:  # Only None when writing new tables
-        partition_spec_fields = map_partition_spec_to_fields(
-            partition_spec=table_partition_spec, table_schema=table_schema
-        )
-    for partition_dimension in partition_dimensions:
-        field = table_schema.find_field(partition_dimension.partition_expr)
-        if partition_spec_fields is not None:
-            if field.field_id not in partition_spec_fields.keys():
-                raise ValueError(
-                    f"Table is not partitioned by field '{field.name}' with id '{field.field_id}'. Available partition fields: {partition_spec_fields}"
-                )
-        # TODO: add timestamp tz type and time type
-        filter_: Union[E.BooleanExpression, List[E.BooleanExpression]]
-        if isinstance(field.field_type, time_partition_dt_types):
-            filter_ = time_window_partition_filter(
-                table_partition=partition_dimension,
-                iceberg_partition_spec_field_type=field.field_type,
-            )
-        elif isinstance(field.field_type, partition_types):
-            filter_ = partition_filter(table_partition=partition_dimension)
-        else:
-            raise ValueError(
-                f"Partitioning by field type '{str(field.field_type)}' not supported"
-            )
-        (
-            partition_filters.append(filter_)
-            if isinstance(filter_, E.BooleanExpression)
-            else partition_filters.extend(filter_)
-        )
-    return partition_filters
-
-
-def partition_filter(
-    table_partition: TablePartitionDimension,
-) -> E.BooleanExpression:
-    partition = cast(Sequence[str], table_partition.partitions)
-    if len(partition) > 1:
-        return E.Or(*[E.EqualTo(table_partition.partition_expr, p) for p in partition])
-    else:
-        return E.EqualTo(table_partition.partition_expr, table_partition.partitions[0])  # type: ignore
-
-
-def time_window_partition_filter(
-    table_partition: TablePartitionDimension,
-    iceberg_partition_spec_field_type: Union[
-        T.DateType, T.TimestampType, T.TimeType, T.TimestamptzType
-    ],
-) -> E.BooleanExpression:
-    """Create an iceberg filter for a dagster time window partition
-
-    Args:
-        table_partition (TablePartitionDimension): Dagster time window partition
-        iceberg_partition_spec_field_type (Union[T.DateType, T.TimestampType, T.TimeType, T.TimestamptzType]): Iceberg field type
-         required to correctly format the partition values
-
-    Returns:
-        List[E.BooleanExpression]: List of iceberg filters with start and end dates
-    """
-    partition = cast(TimeWindow, table_partition.partitions)
-    start_dt, end_dt = partition
-    if isinstance(start_dt, dt.datetime):
-        start_dt = start_dt.replace(tzinfo=None)
-        end_dt = end_dt.replace(tzinfo=None)
-    if isinstance(iceberg_partition_spec_field_type, T.DateType):
-        # Internally, PyIceberg uses dt.date.fromisoformat to parse dates.
-        #  Dagster will pass dt.datetime objects in time window partitions.
-        #  but dt.date.fromisoformat cannot parse dt.datetime.isoformat strings
-        start_dt = start_dt.date()
-        end_dt = end_dt.date()
-    return E.And(
-        *[
-            E.GreaterThanOrEqual(table_partition.partition_expr, start_dt.isoformat()),
-            E.LessThan(table_partition.partition_expr, end_dt.isoformat()),
-        ]
-    )

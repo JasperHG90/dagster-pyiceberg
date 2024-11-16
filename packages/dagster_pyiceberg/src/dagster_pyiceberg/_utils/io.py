@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 import pyarrow as pa
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
 from dagster_pyiceberg._utils.partitions import (
-    partition_dimensions_to_filters,
+    DagsterPartitionToPyIcebergExpressionMapper,
     update_table_partition_spec,
 )
 from dagster_pyiceberg._utils.retries import PyIcebergOperationWithRetry
@@ -11,7 +11,6 @@ from dagster_pyiceberg._utils.schema import update_table_schema
 from dagster_pyiceberg.version import __version__ as dagster_pyiceberg_version
 from pyiceberg import __version__ as iceberg_version
 from pyiceberg import expressions as E
-from pyiceberg import table
 from pyiceberg import table as iceberg_table
 from pyiceberg.catalog.rest import RestCatalog
 from pyiceberg.catalog.sql import SqlCatalog
@@ -129,7 +128,9 @@ def table_writer(
     )
 
 
-def table_reader(table_slice: TableSlice, catalog: CatalogTypes) -> table.DataScan:
+def table_reader(
+    table_slice: TableSlice, catalog: CatalogTypes
+) -> iceberg_table.DataScan:
     """Reads a table slice from an iceberg table and slices it according to partitioning (if present)"""
     if table_slice.partition_dimensions is None:
         raise ValueError(
@@ -160,11 +161,11 @@ def get_row_filter(
 ) -> E.BooleanExpression:
     """Construct an iceberg row filter based on dagster partition dimensions
     that can be used to overwrite those specific rows in the iceberg table."""
-    partition_filters = partition_dimensions_to_filters(
+    partition_filters = DagsterPartitionToPyIcebergExpressionMapper(
         partition_dimensions=dagster_partition_dimensions,
         table_schema=iceberg_table_schema,
         table_partition_spec=iceberg_partition_spec,
-    )
+    ).partition_dimensions_to_filters()
     return (
         E.And(*partition_filters)
         if len(partition_filters) > 1
@@ -177,7 +178,7 @@ def create_table_if_not_exists(
     table_path: str,
     schema: pa.Schema,
     properties: Dict[str, str],
-) -> table.Table:
+) -> iceberg_table.Table:
     """Creates an iceberg table and retries on failure
 
     Args:
@@ -217,7 +218,7 @@ class PyIcebergCreateTableIfNotExistsWithRetry(PyIcebergOperationWithRetry):
 
 
 def overwrite_table(
-    table: table.Table,
+    table: iceberg_table.Table,
     data: pa.Table,
     overwrite_filter: Union[E.BooleanExpression, str],
     snapshot_properties: Optional[Dict[str, str]] = None,

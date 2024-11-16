@@ -508,6 +508,9 @@ requires-dist = [
 name = "dagster-pyiceberg-project"
 version = "0.0.0"
 source = { virtual = "." }
+dependencies = [
+    { name = "getdaft" },
+]
 
 [package.dependency-groups]
 dev = [
@@ -531,6 +534,7 @@ docs = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "getdaft", specifier = ">=0.3.13" }]
 
 [package.metadata.dependency-groups]
 dev = [
@@ -669,6 +673,24 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a0/52/f16a068ebadae42526484c31f4398e62962504e5724a8ba5dc3409483df2/fsspec-2024.10.0.tar.gz", hash = "sha256:eda2d8a4116d4f2429db8550f2457da57279247dd930bb12f821b58391359493", size = 286853 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c6/b2/454d6e7f0158951d8a78c2e1eb4f69ae81beb8dca5fee9809c6c99e9d0d0/fsspec-2024.10.0-py3-none-any.whl", hash = "sha256:03b9a6785766a4de40368b88906366755e2819e758b83705c88cd7cb5fe81871", size = 179641 },
+]
+
+[[package]]
+name = "getdaft"
+version = "0.3.13"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fsspec" },
+    { name = "pyarrow" },
+    { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/39/18/9660891c077d3b771cb57e93408fa475014018cd6c7335aa3abcbb79619d/getdaft-0.3.13.tar.gz", hash = "sha256:d0cbb2e463af5b628c18cd7e182c21dee7f50f5f9d4fe93b4a2ebeb52593e928", size = 3898373 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/80/17/dd2f9edf01dfb124d64edbb0833afdb767961728b3b0e01ec1328e92a95e/getdaft-0.3.13-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:3c267a563b41c0997b897c7b354f97e932bf56bf8096fb1040860d629b529cde", size = 29900622 },
+    { url = "https://files.pythonhosted.org/packages/df/a1/d1def7b38ca8fb2d45348c12409e60566a012fe977633c1a4142dedb9cb9/getdaft-0.3.13-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:88afa12e888bd408dcb9a6b2cda139c73b8b201baac1eddb4d25eaaefd2804a5", size = 27674539 },
+    { url = "https://files.pythonhosted.org/packages/91/eb/c08e633a917e2a4c5f2e895912782216ae616a0ccecc741935d0f203a9e4/getdaft-0.3.13-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e7ff3e8a09c8647a2e6fc38bf94eabf9b7c05b8e999ffb7fb02a97bee51049f5", size = 31523766 },
+    { url = "https://files.pythonhosted.org/packages/1c/20/dab88809595219135ac5f6d59d8b37deb50e06f58e3fbad7031e53c858b8/getdaft-0.3.13-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:58f7bfd1ed4915af020975ba9a97074c8852a0f4d55ebac5ceaced4a784b61ca", size = 33134547 },
+    { url = "https://files.pythonhosted.org/packages/f6/61/4a97e2f823e538918384a31ade99c3da47c3354f30a664af39378df2d0ff/getdaft-0.3.13-cp38-abi3-win_amd64.whl", hash = "sha256:1a1cef3bf3fdffaa752f3f05994db9eda52a4d97097768aeaeb9abca1d062960", size = 30091518 },
 ]
 
 [[package]]

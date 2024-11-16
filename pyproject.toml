@@ -7,7 +7,9 @@ authors = [
 ]
 requires-python = ">=3.10"
 readme = "README.md"
-dependencies = []
+dependencies = [
+    "getdaft>=0.3.13",
+]
 
 [tool.uv]
 default-groups = ["dev", "docs"]
