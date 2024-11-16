@@ -42,6 +42,14 @@ Documentation = "https://jasperhg90.github.io/dagster-pyiceberg/"
 Repository = "https://github.com/JasperHG90/dagster-pyiceberg"
 "Bug Tracker" = "https://github.com/JasperHG90/dagster-pyiceberg/issues"
 
+[project.optional-dependencies]
+daft = [
+    "getdaft>=0.3.13",
+]
+polars = [
+    "polars>=1.13.1",
+]
+
 [tool.black]
 line-length = 88
 exclude = '''
