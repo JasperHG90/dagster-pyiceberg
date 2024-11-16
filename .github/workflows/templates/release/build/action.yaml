@@ -10,10 +10,6 @@ inputs:
     description: 'uv version to use'
     required: true
     default: 'latest'
-  path_to_packages:
-    description: 'Path to python packages'
-    required: true
-    default: 'packages'
 
 runs:
   using: 'composite'
@@ -40,10 +36,10 @@ runs:
       uses: ./.github/workflows/templates/release/utils/bump_version
       with:
         version: ${{ steps.version.outputs.version }}
-        root: ${{ inputs.path_to_packages }}
-        glob: '**/src/**/version.py,**/pyproject.toml'
+        root: '.'
+        glob: 'src/**/version.py,**/pyproject.toml'
     - name: 'Build python packages'
       id: build
       run: |
-        uv build --all
+        uv build
       shell: bash
