@@ -13,5 +13,3 @@ uv add https://github.com/JasperHG90/dagster-pyiceberg/releases/download/v<VERSI
 ```
 
 You can find a list of versions / releases [here](https://github.com/JasperHG90/dagster-pyiceberg/releases).
-
-To install `dagster-pyiceberg-pandas` and `dagster-pyiceberg-polars`, you can use the same method as described above.

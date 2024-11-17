@@ -150,10 +150,6 @@ The PyIceberg I/O manager also supports storing and loading PyArrow and Polars D
 
 === "Pandas DataFrames"
 
-    !!! info "Installing dagster-pyiceberg-pandas"
-
-        To use `IcebergPandasIOManager` you must install `dagster-pyiceberg-pandas`
-
      You can use `IcebergPandasIOManager` to read and write iceberg tables using Pandas:
 
     ```python title="docs/snippets/io_manager_pandas.py" linenums="1"
@@ -161,10 +157,6 @@ The PyIceberg I/O manager also supports storing and loading PyArrow and Polars D
     ```
 
 === "Polars DataFrames"
-
-    !!! info "Installing dagster-pyiceberg-pandas"
-
-        To use `IcebergPandasIOManager` you must install `dagster-pyiceberg-polars`
 
      You can use the `IcebergPolarsIOManager` to read and write iceberg tables using Pandas:
 

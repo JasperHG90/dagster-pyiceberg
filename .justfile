@@ -6,7 +6,7 @@ alias d := docs
 
 # Install python dependencies
 install:
-  uv sync --all-extras
+  uv sync --all-extras --group dev --group docs
 
 # Install pre-commit hooks
 pre_commit_setup:
