@@ -14,15 +14,13 @@ The table below shows which PyIceberg features are currently available.
 
 ### Supported catalog backends
 
-The following catalog backends are currently supported.
-
-- sql
-- rest
+`dagster-pyiceberg` supports all catalog backends that are available through `pyiceberg`. See overview and configuration options [here](https://py.iceberg.apache.org/configuration/#catalogs).
 
 ### Implemented engines
 
 The following engines are currently implemented.
 
-- arrow
-- pandas
-- polars
+- [arrow](https://arrow.apache.org/docs/python/index.html)
+- [daft](https://www.getdaft.io/)
+- [pandas](https://pandas.pydata.org/)
+- [polars](https://pola.rs/)
