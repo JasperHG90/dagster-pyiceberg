@@ -6,7 +6,8 @@ from dagster import asset, materialize
 from pyiceberg.catalog import Catalog
 from pyiceberg.table import Table
 
-from dagster_pyiceberg import IcebergCatalogConfig, IcebergTableResource
+from dagster_pyiceberg.config import IcebergCatalogConfig
+from dagster_pyiceberg.resource import IcebergTableResource
 
 
 @pytest.fixture(scope="module")

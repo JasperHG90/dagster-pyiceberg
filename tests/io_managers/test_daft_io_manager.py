@@ -14,7 +14,8 @@ from dagster import (
 )
 from pyiceberg.catalog import Catalog
 
-from dagster_pyiceberg import IcebergCatalogConfig, IcebergDaftIOManager
+from dagster_pyiceberg.config import IcebergCatalogConfig
+from dagster_pyiceberg.io_manager.daft import IcebergDaftIOManager
 
 
 @pytest.fixture

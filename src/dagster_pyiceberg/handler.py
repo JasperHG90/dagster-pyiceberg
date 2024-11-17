@@ -1,27 +1,17 @@
 from abc import abstractmethod
-from typing import Generic, Sequence, Tuple, Type, TypeVar, Union, cast
+from typing import Generic, TypeVar, Union, cast
 
-import daft as da
-import polars as pl
 import pyarrow as pa
 from dagster import InputContext, MetadataValue, OutputContext, TableColumn, TableSchema
 from dagster._core.storage.db_io_manager import DbTypeHandler, TableSlice
-from pyiceberg import expressions as E
 from pyiceberg import table as ibt
 from pyiceberg.table.snapshots import Snapshot
 
-from dagster_pyiceberg._utils import (
-    CatalogTypes,
-    DagsterPartitionToDaftSqlPredicateMapper,
-    DagsterPartitionToPolarsSqlPredicateMapper,
-    DagsterPartitionToPyIcebergExpressionMapper,
-    table_writer,
-)
+from dagster_pyiceberg._utils import CatalogTypes, table_writer
 
 U = TypeVar("U")
 
 ArrowTypes = Union[pa.Table, pa.RecordBatchReader]
-PolarsTypes = Union[pl.LazyFrame, pl.DataFrame]
 
 
 class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
@@ -108,109 +98,3 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
             table_slice=table_slice,
             target_type=context.dagster_type.typing_type,
         )
-
-
-class IcebergPyArrowTypeHandler(IcebergBaseTypeHandler[ArrowTypes]):
-    """Type handler that converts data between Iceberg tables and pyarrow Tables"""
-
-    def to_data_frame(
-        self, table: ibt.Table, table_slice: TableSlice, target_type: Type[ArrowTypes]
-    ) -> ArrowTypes:
-        selected_fields: Tuple[str, ...] = (
-            tuple(table_slice.columns) if table_slice.columns is not None else ("*",)
-        )
-        row_filter: E.BooleanExpression
-        if table_slice.partition_dimensions:
-            expressions = DagsterPartitionToPyIcebergExpressionMapper(
-                partition_dimensions=table_slice.partition_dimensions,
-                table_schema=table.schema(),
-                table_partition_spec=table.spec(),
-            ).partition_dimensions_to_filters()
-            row_filter = E.And(*expressions) if len(expressions) > 1 else expressions[0]
-        else:
-            row_filter = ibt.ALWAYS_TRUE
-
-        table_scan = table.scan(row_filter=row_filter, selected_fields=selected_fields)
-
-        return (
-            table_scan.to_arrow()
-            if target_type == pa.Table
-            else table_scan.to_arrow_batch_reader()
-        )
-
-    def to_arrow(self, obj: ArrowTypes) -> pa.Table:
-        return obj
-
-    @property
-    def supported_types(self) -> Sequence[Type[object]]:
-        return (pa.Table, pa.RecordBatchReader)
-
-
-class IcebergPolarsTypeHandler(IcebergBaseTypeHandler[PolarsTypes]):
-    """Type handler that converts data between Iceberg tables and polars DataFrames"""
-
-    def to_data_frame(
-        self, table: ibt.Table, table_slice: TableSlice, target_type: Type[PolarsTypes]
-    ) -> PolarsTypes:
-        selected_fields: str = (
-            ",".join(table_slice.columns) if table_slice.columns is not None else "*"
-        )
-        row_filter: str | None = None
-        if table_slice.partition_dimensions:
-            expressions = DagsterPartitionToPolarsSqlPredicateMapper(
-                partition_dimensions=table_slice.partition_dimensions,
-                table_schema=table.schema(),
-                table_partition_spec=table.spec(),
-            ).partition_dimensions_to_filters()
-            row_filter = " AND ".join(expressions)
-
-        pdf = pl.scan_iceberg(source=table)
-
-        stmt = f"SELECT {selected_fields} FROM self"
-        if row_filter is not None:
-            stmt += f"\nWHERE {row_filter}"
-        return pdf.sql(stmt) if target_type == pl.LazyFrame else pdf.sql(stmt).collect()
-
-    def to_arrow(self, obj: PolarsTypes) -> pa.Table:
-        if isinstance(obj, pl.LazyFrame):
-            return obj.collect().to_arrow()
-        else:
-            return obj.to_arrow()
-
-    @property
-    def supported_types(self) -> Sequence[Type[object]]:
-        return (pl.LazyFrame, pl.DataFrame)
-
-
-class IcebergDaftTypeHandler(IcebergBaseTypeHandler[da.DataFrame]):
-    """Type handler that converts data between Iceberg tables and polars DataFrames"""
-
-    def to_data_frame(
-        self, table: ibt.Table, table_slice: TableSlice, target_type: Type[da.DataFrame]
-    ) -> da.DataFrame:
-        selected_fields: str = (
-            ",".join(table_slice.columns) if table_slice.columns is not None else "*"
-        )
-        row_filter: str | None = None
-        if table_slice.partition_dimensions:
-            expressions = DagsterPartitionToDaftSqlPredicateMapper(
-                partition_dimensions=table_slice.partition_dimensions,
-                table_schema=table.schema(),
-                table_partition_spec=table.spec(),
-            ).partition_dimensions_to_filters()
-            row_filter = " AND ".join(expressions)
-
-        ddf = table.to_daft()  # type: ignore # noqa
-
-        stmt = f"SELECT {selected_fields} FROM ddf"
-        if row_filter is not None:
-            stmt += f"\nWHERE {row_filter}"
-
-        return da.sql(stmt)
-
-    def to_arrow(self, obj: da.DataFrame) -> pa.Table:
-        return obj.to_arrow()
-
-    @property
-    def supported_types(self) -> Sequence[Type[object]]:
-        return [da.DataFrame]
