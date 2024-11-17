@@ -7,12 +7,12 @@ import pytest
 from dagster._core.definitions.time_window_partitions import TimeWindow
 from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSlice
 from pyiceberg import expressions as E
-from pyiceberg.catalog.sql import SqlCatalog
+from pyiceberg.catalog import Catalog
 
 from dagster_pyiceberg._utils import io
 
 
-def test_table_writer(namespace: str, catalog: SqlCatalog, data: pa.Table):
+def test_table_writer(namespace: str, catalog: Catalog, data: pa.Table):
     table_ = "handler_data_table_writer"
     identifier_ = f"{namespace}.{table_}"
     io.table_writer(
@@ -43,7 +43,7 @@ def test_table_writer(namespace: str, catalog: SqlCatalog, data: pa.Table):
     )
 
 
-def test_table_writer_partitioned(namespace: str, catalog: SqlCatalog, data: pa.Table):
+def test_table_writer_partitioned(namespace: str, catalog: Catalog, data: pa.Table):
     # Works similar to # https://docs.dagster.io/integrations/deltalake/reference#storing-multi-partitioned-assets
     # Need to subset the data.
     table_ = "handler_data_table_writer_partitioned"
@@ -76,7 +76,7 @@ def test_table_writer_partitioned(namespace: str, catalog: SqlCatalog, data: pa.
 
 
 def test_table_writer_multi_partitioned(
-    namespace: str, catalog: SqlCatalog, data: pa.Table
+    namespace: str, catalog: Catalog, data: pa.Table
 ):
     # Works similar to # https://docs.dagster.io/integrations/deltalake/reference#storing-multi-partitioned-assets
     # Need to subset the data.
@@ -115,7 +115,7 @@ def test_table_writer_multi_partitioned(
 
 
 def test_table_writer_multi_partitioned_update(
-    namespace: str, catalog: SqlCatalog, data: pa.Table
+    namespace: str, catalog: Catalog, data: pa.Table
 ):
     # Works similar to # https://docs.dagster.io/integrations/deltalake/reference#storing-multi-partitioned-assets
     # Need to subset the data.
@@ -167,7 +167,7 @@ def test_table_writer_multi_partitioned_update(
 
 
 def test_table_writer_multi_partitioned_update_partition_spec_change(
-    namespace: str, warehouse_path: str, catalog: SqlCatalog, data: pa.Table
+    namespace: str, warehouse_path: str, catalog: Catalog, data: pa.Table
 ):
     table_ = "handler_data_table_writer_multi_partitioned_update_partition_spec_change"
     identifier_ = f"{namespace}.{table_}"
@@ -230,7 +230,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_change(
 
 
 def test_table_writer_multi_partitioned_update_partition_spec_error(
-    namespace: str, catalog: SqlCatalog, data: pa.Table
+    namespace: str, catalog: Catalog, data: pa.Table
 ):
     table_ = "handler_data_multi_partitioned_update_partition_spec_error"
     io.table_writer(
@@ -284,7 +284,7 @@ def test_table_writer_multi_partitioned_update_partition_spec_error(
 
 
 def test_iceberg_table_writer_with_table_properties(
-    namespace: str, catalog: SqlCatalog, data: pa.Table
+    namespace: str, catalog: Catalog, data: pa.Table
 ):
     table_ = "handler_data_iceberg_table_writer_with_table_properties"
     identifier_ = f"{namespace}.{table_}"

@@ -5,7 +5,7 @@ from typing import Dict, Iterator
 import psycopg2
 import pyarrow as pa
 import pytest
-from pyiceberg.catalog.sql import SqlCatalog
+from pyiceberg.catalog import Catalog, load_catalog
 from testcontainers.postgres import PostgresContainer
 
 postgres = PostgresContainer("postgres:17-alpine")
@@ -77,15 +77,15 @@ def catalog_name() -> str:
 
 
 @pytest.fixture(scope="function")
-def catalog(catalog_name: str, catalog_config_properties: Dict[str, str]) -> SqlCatalog:
-    return SqlCatalog(
-        catalog_name,
+def catalog(catalog_name: str, catalog_config_properties: Dict[str, str]) -> Catalog:
+    return load_catalog(
+        name=catalog_name,
         **catalog_config_properties,
     )
 
 
 @pytest.fixture(scope="function", autouse=True)
-def namespace(catalog: SqlCatalog) -> str:
+def namespace(catalog: Catalog) -> str:
     catalog.create_namespace("pytest")
     return "pytest"
 

@@ -12,9 +12,9 @@ from dagster import (
     asset,
     materialize,
 )
-from pyiceberg.catalog.sql import SqlCatalog
+from pyiceberg.catalog import Catalog
 
-from dagster_pyiceberg import IcebergPolarsIOManager, IcebergSqlCatalogConfig
+from dagster_pyiceberg import IcebergCatalogConfig, IcebergPolarsIOManager
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def io_manager(
 ) -> IcebergPolarsIOManager:
     return IcebergPolarsIOManager(
         name=catalog_name,
-        config=IcebergSqlCatalogConfig(properties=catalog_config_properties),
+        config=IcebergCatalogConfig(properties=catalog_config_properties),
         schema=namespace,
         partition_spec_update_mode="error",
     )
@@ -134,7 +134,7 @@ def multi_partitioned(context: AssetExecutionContext) -> pl.DataFrame:
 def test_iceberg_io_manager_with_assets(
     asset_b_df_table_identifier: str,
     asset_b_plus_one_table_identifier: str,
-    catalog: SqlCatalog,
+    catalog: Catalog,
     io_manager: IcebergPolarsIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
@@ -154,7 +154,7 @@ def test_iceberg_io_manager_with_assets(
 
 def test_iceberg_io_manager_with_daily_partitioned_assets(
     asset_daily_partitioned_table_identifier: str,
-    catalog: SqlCatalog,
+    catalog: Catalog,
     io_manager: IcebergPolarsIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
@@ -184,7 +184,7 @@ def test_iceberg_io_manager_with_daily_partitioned_assets(
 
 def test_iceberg_io_manager_with_hourly_partitioned_assets(
     asset_hourly_partitioned_table_identifier: str,
-    catalog: SqlCatalog,
+    catalog: Catalog,
     io_manager: IcebergPolarsIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
@@ -214,7 +214,7 @@ def test_iceberg_io_manager_with_hourly_partitioned_assets(
 
 def test_iceberg_io_manager_with_multipartitioned_assets(
     asset_multi_partitioned_table_identifier: str,
-    catalog: SqlCatalog,
+    catalog: Catalog,
     io_manager: IcebergPolarsIOManager,
 ):
     resource_defs = {"io_manager": io_manager}
