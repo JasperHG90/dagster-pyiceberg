@@ -52,5 +52,5 @@ class IcebergTableResource(ConfigurableResource):
 
     def load(self) -> Table:
         config_ = self.config.model_dump()
-        catalog = load_catalog(name=self.name, **config_["config"]["properties"])
+        catalog = load_catalog(name=self.name, **config_["properties"])
         return catalog.load_table(identifier="%s.%s" % (self.schema_, self.table))
