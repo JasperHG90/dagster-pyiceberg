@@ -148,7 +148,6 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
 
     name: str = Field(description="The name of the iceberg catalog.")
     config: IcebergCatalogConfig = Field(
-        discriminator="type",
         description="Additional configuration properties for the iceberg catalog.",
     )
     schema_: Optional[str] = Field(
