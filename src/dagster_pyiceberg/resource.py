@@ -1,16 +1,11 @@
-from typing import Optional, Union, cast
+from typing import Optional
 
 from dagster import ConfigurableResource
 from pydantic import Field
+from pyiceberg.catalog import load_catalog
 from pyiceberg.table import Table
 
-from dagster_pyiceberg.config import IcebergRestCatalogConfig, IcebergSqlCatalogConfig
-from dagster_pyiceberg.io_manager import (
-    _connect_to_catalog,
-    _IcebergMetastoreCatalogConfig,
-)
-
-SupportedCatalogConfigs = Union[IcebergRestCatalogConfig, IcebergSqlCatalogConfig]
+from dagster_pyiceberg.config import IcebergCatalogConfig
 
 
 class IcebergTableResource(ConfigurableResource):
@@ -39,8 +34,7 @@ class IcebergTableResource(ConfigurableResource):
     """
 
     name: str = Field(description="The name of the iceberg catalog.")
-    config: SupportedCatalogConfigs = Field(
-        discriminator="type",
+    config: IcebergCatalogConfig = Field(
         description="Additional configuration properties for the iceberg catalog.",
     )
     table: str = Field(
@@ -58,8 +52,5 @@ class IcebergTableResource(ConfigurableResource):
 
     def load(self) -> Table:
         config_ = self.config.model_dump()
-        config_parsed = {config_["type"]: {"properties": config_["properties"]}}
-        catalog = _connect_to_catalog(
-            name=self.name, config=cast(_IcebergMetastoreCatalogConfig, config_parsed)
-        )
+        catalog = load_catalog(name=self.name, **config_["properties"])
         return catalog.load_table(identifier="%s.%s" % (self.schema_, self.table))

@@ -27,7 +27,7 @@ from dagster import (
     materialize,
 )
 
-from dagster_pyiceberg import IcebergPyarrowIOManager, IcebergSqlCatalogConfig
+from dagster_pyiceberg import IcebergCatalogConfig, IcebergPyarrowIOManager
 
 
 @pytest.fixture
@@ -36,7 +36,7 @@ def io_manager(
 ) -> IcebergPyarrowIOManager:
     return IcebergPyarrowIOManager(
         name=catalog_name,
-        config=IcebergSqlCatalogConfig(properties=catalog_config_properties),
+        config=IcebergCatalogConfig(properties=catalog_config_properties),
         schema=namespace,
         partition_spec_update_mode="error",
         db_io_manager="custom",

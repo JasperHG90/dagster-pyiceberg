@@ -8,7 +8,7 @@ from pyiceberg import schema as iceberg_schema
 from pyiceberg import table as iceberg_table
 from pyiceberg import transforms
 from pyiceberg import types as T
-from pyiceberg.catalog.sql import SqlCatalog
+from pyiceberg.catalog import Catalog
 
 
 @pytest.fixture()
@@ -119,14 +119,14 @@ def table_partitioned_update_identifier(
 
 @pytest.fixture(scope="function", autouse=True)
 def create_table_in_catalog(
-    catalog: SqlCatalog, table_identifier: str, data_schema: pa.Schema
+    catalog: Catalog, table_identifier: str, data_schema: pa.Schema
 ):
     catalog.create_table(table_identifier, schema=data_schema)
 
 
 @pytest.fixture(scope="function", autouse=True)
 def create_partitioned_table_in_catalog(
-    catalog: SqlCatalog, table_partitioned_identifier: str, data_schema: pa.Schema
+    catalog: Catalog, table_partitioned_identifier: str, data_schema: pa.Schema
 ):
     partitioned_table = catalog.create_table(
         table_partitioned_identifier, schema=data_schema
@@ -146,7 +146,7 @@ def create_partitioned_table_in_catalog(
 
 @pytest.fixture(scope="function", autouse=True)
 def create_partitioned_update_table_in_catalog(
-    catalog: SqlCatalog,
+    catalog: Catalog,
     table_partitioned_update_identifier: str,
     data_schema: pa.Schema,
 ):
@@ -168,7 +168,7 @@ def create_partitioned_update_table_in_catalog(
 
 @pytest.fixture(scope="function", autouse=True)
 def append_data_to_table(
-    create_table_in_catalog, catalog: SqlCatalog, table_identifier: str, data: pa.Table
+    create_table_in_catalog, catalog: Catalog, table_identifier: str, data: pa.Table
 ):
     catalog.load_table(table_identifier).append(data)
 
@@ -176,7 +176,7 @@ def append_data_to_table(
 @pytest.fixture(scope="function", autouse=True)
 def append_data_to_partitioned_table(
     create_partitioned_table_in_catalog,
-    catalog: SqlCatalog,
+    catalog: Catalog,
     table_partitioned_identifier: str,
     data: pa.Table,
 ):
@@ -186,7 +186,7 @@ def append_data_to_partitioned_table(
 @pytest.fixture(scope="function")
 def append_data_to_partitioned_update_table(
     create_partitioned_update_table_in_catalog,
-    catalog: SqlCatalog,
+    catalog: Catalog,
     table_partitioned_update_identifier: str,
     data: pa.Table,
 ):
@@ -194,19 +194,19 @@ def append_data_to_partitioned_update_table(
 
 
 @pytest.fixture(scope="function")
-def table(catalog: SqlCatalog, table_identifier: str) -> iceberg_table.Table:
+def table(catalog: Catalog, table_identifier: str) -> iceberg_table.Table:
     return catalog.load_table(table_identifier)
 
 
 @pytest.fixture(scope="function")
 def table_partitioned(
-    catalog: SqlCatalog, table_partitioned_identifier: str
+    catalog: Catalog, table_partitioned_identifier: str
 ) -> iceberg_table.Table:
     return catalog.load_table(table_partitioned_identifier)
 
 
 @pytest.fixture(scope="function")
 def table_partitioned_update(
-    catalog: SqlCatalog, table_partitioned_update_identifier: str
+    catalog: Catalog, table_partitioned_update_identifier: str
 ) -> iceberg_table.Table:
     return catalog.load_table(table_partitioned_update_identifier)

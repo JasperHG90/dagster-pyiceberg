@@ -1,16 +1,7 @@
 import enum
 from abc import abstractmethod
 from contextlib import contextmanager  # noqa
-from typing import (  # noqa
-    Dict,
-    Iterator,
-    Optional,
-    Sequence,
-    Type,
-    TypedDict,
-    Union,
-    cast,
-)
+from typing import Dict, Iterator, Optional, Sequence, Type, TypedDict, cast  # noqa
 
 from dagster import OutputContext
 from dagster._config.pythonic_config import ConfigurableIOManagerFactory
@@ -23,14 +14,10 @@ from dagster._core.storage.db_io_manager import (
     TableSlice,
 )
 from pydantic import Field
-from pyiceberg.catalog.rest import RestCatalog
-from pyiceberg.catalog.sql import SqlCatalog
+from pyiceberg.catalog import Catalog, load_catalog
 
 from dagster_pyiceberg._db_io_manager import CustomDbIOManager
-from dagster_pyiceberg.config import (  # noqa
-    IcebergRestCatalogConfig,
-    IcebergSqlCatalogConfig,
-)
+from dagster_pyiceberg.config import IcebergCatalogConfig  # noqa
 from dagster_pyiceberg.handler import CatalogTypes
 
 
@@ -54,35 +41,12 @@ class _IcebergCatalogProperties(TypedDict):
     properties: Dict[str, str]
 
 
-class _IcebergMetastoreCatalogConfig(TypedDict, total=False):
-
-    sql: _IcebergCatalogProperties
-    rest: _IcebergCatalogProperties
-
-
 class _IcebergTableIOManagerResourceConfig(TypedDict):
 
     name: str
-    config: _IcebergMetastoreCatalogConfig
+    config: _IcebergCatalogProperties
     partition_spec_update_mode: PartitionSpecUpdateMode
     schema_update_mode: SchemaUpdateMode
-
-
-def _connect_to_catalog(
-    name: str,
-    config: _IcebergMetastoreCatalogConfig,
-) -> CatalogTypes:
-    """Connect to the iceberg catalog."""
-
-    if "sql" in config:
-        catalog = SqlCatalog(name=name, **config["sql"]["properties"])
-    elif "rest" in config:
-        catalog = RestCatalog(name=name, **config["rest"]["properties"])
-    else:
-        raise NotImplementedError(
-            f"Catalog type '{next(iter(config.keys()))}' not implemented"
-        )
-    return catalog
 
 
 class IcebergDbClient(DbClient):
@@ -115,12 +79,12 @@ class IcebergDbClient(DbClient):
 
     @staticmethod
     @contextmanager
-    def connect(context, table_slice: TableSlice) -> Iterator[CatalogTypes]:
+    def connect(context, table_slice: TableSlice) -> Iterator[Catalog]:
         resource_config = cast(
             _IcebergTableIOManagerResourceConfig, context.resource_config
         )
-        yield _connect_to_catalog(
-            name=resource_config["name"], config=resource_config["config"]
+        yield load_catalog(
+            name=resource_config["name"], **resource_config["config"]["properties"]
         )
 
 
@@ -183,8 +147,7 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
     """
 
     name: str = Field(description="The name of the iceberg catalog.")
-    config: Union[IcebergSqlCatalogConfig, IcebergRestCatalogConfig] = Field(
-        discriminator="type",
+    config: IcebergCatalogConfig = Field(
         description="Additional configuration properties for the iceberg catalog.",
     )
     schema_: Optional[str] = Field(

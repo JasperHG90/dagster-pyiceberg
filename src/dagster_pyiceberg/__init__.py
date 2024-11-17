@@ -3,10 +3,7 @@ from typing import Sequence
 # from dagster._core.libraries import DagsterLibraryRegistry
 from dagster._core.storage.db_io_manager import DbTypeHandler
 
-from dagster_pyiceberg.config import (
-    IcebergRestCatalogConfig as IcebergRestCatalogConfig,
-)
-from dagster_pyiceberg.config import IcebergSqlCatalogConfig as IcebergSqlCatalogConfig
+from dagster_pyiceberg.config import IcebergCatalogConfig as IcebergCatalogConfig
 from dagster_pyiceberg.handler import IcebergDaftTypeHandler as IcebergDaftTypeHandler
 from dagster_pyiceberg.handler import (
     IcebergPolarsTypeHandler as IcebergPolarsTypeHandler,
