@@ -5,9 +5,10 @@ import pyarrow as pa
 from dagster import InputContext, MetadataValue, OutputContext, TableColumn, TableSchema
 from dagster._core.storage.db_io_manager import DbTypeHandler, TableSlice
 from pyiceberg import table as ibt
+from pyiceberg.catalog import Catalog
 from pyiceberg.table.snapshots import Snapshot
 
-from dagster_pyiceberg._utils import CatalogTypes, table_writer
+from dagster_pyiceberg._utils import table_writer
 
 U = TypeVar("U")
 
@@ -31,7 +32,7 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
         context: OutputContext,
         table_slice: TableSlice,
         obj: U,
-        connection: CatalogTypes,
+        connection: Catalog,
     ):
         """Stores pyarrow types in Iceberg table"""
         metadata = context.definition_metadata or {}  # noqa
@@ -90,7 +91,7 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
         self,
         context: InputContext,
         table_slice: TableSlice,
-        connection: CatalogTypes,
+        connection: Catalog,
     ) -> U:
         """Loads the input using a dataframe implmentation"""
         return self.to_data_frame(

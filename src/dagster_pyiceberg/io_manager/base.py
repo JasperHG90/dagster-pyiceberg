@@ -18,7 +18,6 @@ from pyiceberg.catalog import Catalog, load_catalog
 
 from dagster_pyiceberg._db_io_manager import CustomDbIOManager
 from dagster_pyiceberg.config import IcebergCatalogConfig  # noqa
-from dagster_pyiceberg.handler import CatalogTypes
 
 
 class PartitionSpecUpdateMode(enum.Enum):
@@ -53,12 +52,12 @@ class IcebergDbClient(DbClient):
 
     @staticmethod
     def delete_table_slice(
-        context: OutputContext, table_slice: TableSlice, connection: CatalogTypes
+        context: OutputContext, table_slice: TableSlice, connection: Catalog
     ) -> None: ...
 
     @staticmethod
     def ensure_schema_exists(
-        context: OutputContext, table_slice: TableSlice, connection: CatalogTypes
+        context: OutputContext, table_slice: TableSlice, connection: Catalog
     ) -> None: ...
 
     @staticmethod

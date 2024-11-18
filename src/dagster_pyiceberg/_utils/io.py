@@ -5,8 +5,7 @@ from dagster._core.storage.db_io_manager import TablePartitionDimension, TableSl
 from pyiceberg import __version__ as iceberg_version
 from pyiceberg import expressions as E
 from pyiceberg import table as iceberg_table
-from pyiceberg.catalog.rest import RestCatalog
-from pyiceberg.catalog.sql import SqlCatalog
+from pyiceberg.catalog import Catalog
 from pyiceberg.exceptions import CommitFailedException, TableAlreadyExistsError
 from pyiceberg.partitioning import PartitionSpec
 from pyiceberg.schema import Schema
@@ -19,13 +18,11 @@ from dagster_pyiceberg._utils.retries import PyIcebergOperationWithRetry
 from dagster_pyiceberg._utils.schema import update_table_schema
 from dagster_pyiceberg.version import __version__ as dagster_pyiceberg_version
 
-CatalogTypes = Union[SqlCatalog, RestCatalog]
-
 
 def table_writer(
     table_slice: TableSlice,
     data: pa.Table,
-    catalog: CatalogTypes,
+    catalog: Catalog,
     schema_update_mode: str,
     partition_spec_update_mode: str,
     dagster_run_id: str,
@@ -38,7 +35,7 @@ def table_writer(
         table_slice (TableSlice): dagster database IO manager table slice. This
             contains information about dagster partitions.
         data (pa.Table): PyArrow table
-        catalog (CatalogTypes): PyIceberg catalogs supported by this library
+        catalog (Catalog): PyIceberg catalogs supported by this library
         schema_update_mode (str): Whether to process schema updates on existing
             tables or error, value is either 'error' or 'update'
 
@@ -149,7 +146,7 @@ def get_expression_row_filter(
 
 
 def create_table_if_not_exists(
-    catalog: CatalogTypes,
+    catalog: Catalog,
     table_path: str,
     schema: pa.Schema,
     properties: Dict[str, str],
@@ -157,7 +154,7 @@ def create_table_if_not_exists(
     """Creates an iceberg table and retries on failure
 
     Args:
-        catalog (CatalogTypes): PyIceberg catalogs supported by this library
+        catalog (Catalog): PyIceberg catalogs supported by this library
         table_path (str): Table path
         schema (pa.Schema): PyArrow schema
         properties (Dict[str, str]): Table properties
@@ -177,7 +174,7 @@ def create_table_if_not_exists(
 
 class PyIcebergCreateTableIfNotExistsWithRetry(PyIcebergOperationWithRetry):
 
-    def __init__(self, catalog: CatalogTypes):
+    def __init__(self, catalog: Catalog):
         self.catalog = catalog
 
     def refresh(self):
