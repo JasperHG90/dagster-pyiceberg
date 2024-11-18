@@ -46,6 +46,9 @@ daft = [
 polars = [
     "polars>=1.13.1",
 ]
+pandas = [
+    "pandas>=2.2.3",
+]
 
 [tool.black]
 line-length = 88
