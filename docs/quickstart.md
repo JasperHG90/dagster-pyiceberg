@@ -10,7 +10,8 @@ To use dagster-pyiceberg as an I/O manager, you add it to your `Definition`:
 
 ```py linenums="1"
 from dagster import Definitions
-from dagster_pyiceberg import IcebergPyarrowIOManager, IcebergSqlCatalogConfig
+from dagster_pyiceberg.config import IcebergCatalogConfig
+from dagster_pyiceberg.io_manager.arrow import IcebergPyarrowIOManager
 
 CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/dag/warehouse/catalog.db"
 CATALOG_WAREHOUSE = "file:///home/vscode/workspace/.tmp/dag/warehouse"
@@ -19,7 +20,7 @@ CATALOG_WAREHOUSE = "file:///home/vscode/workspace/.tmp/dag/warehouse"
 resources = {
     "io_manager": IcebergPyarrowIOManager(
         name="test",
-        config=IcebergSqlCatalogConfig(
+        config=IcebergCatalogConfig(
             properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
         ),
         schema="dagster",
