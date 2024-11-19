@@ -1,9 +1,9 @@
+import daft as da
 import pandas as pd
-import polars as pl
 from dagster import Definitions, asset
 
 from dagster_pyiceberg.config import IcebergCatalogConfig
-from dagster_pyiceberg.io_manager.polars import IcebergPolarsIOManager
+from dagster_pyiceberg.io_manager.daft import IcebergDaftIOManager
 
 CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/select_columns/catalog.db"
 CATALOG_WAREHOUSE = (
@@ -12,7 +12,7 @@ CATALOG_WAREHOUSE = (
 
 
 resources = {
-    "io_manager": IcebergPolarsIOManager(
+    "io_manager": IcebergDaftIOManager(
         name="test",
         config=IcebergCatalogConfig(
             properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
@@ -23,8 +23,8 @@ resources = {
 
 
 @asset
-def iris_dataset() -> pl.DataFrame:
-    return pl.from_pandas(
+def iris_dataset() -> da.DataFrame:
+    return da.from_pandas(
         pd.read_csv(
             "https://docs.dagster.io/assets/iris.csv",
             names=[

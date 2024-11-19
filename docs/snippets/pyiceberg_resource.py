@@ -5,7 +5,8 @@ NB: This snippet assumes that an iceberg table called 'ingested_data' exists.
 import pandas as pd
 from dagster import Definitions, asset
 
-from dagster_pyiceberg import IcebergSqlCatalogConfig, IcebergTableResource
+from dagster_pyiceberg.config import IcebergCatalogConfig
+from dagster_pyiceberg.resource import IcebergTableResource
 
 CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/catalog.db"
 CATALOG_WAREHOUSE = "file:///home/vscode/workspace/.tmp/examples/warehouse"
@@ -21,7 +22,7 @@ defs = Definitions(
     resources={
         "iceberg": IcebergTableResource(
             name="test",
-            config=IcebergSqlCatalogConfig(
+            config=IcebergCatalogConfig(
                 properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
             ),
             schema="dagster",

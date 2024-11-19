@@ -1,8 +1,8 @@
 import pandas as pd
 from dagster import Definitions, FilesystemIOManager, asset
-from dagster_pyiceberg_pandas import IcebergPandasIOManager
 
-from dagster_pyiceberg import IcebergSqlCatalogConfig
+from dagster_pyiceberg.config import IcebergCatalogConfig
+from dagster_pyiceberg.io_manager.pandas import IcebergPandasIOManager
 
 CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/catalog.db"
 CATALOG_WAREHOUSE = "file:///home/vscode/workspace/.tmp/examples/warehouse"
@@ -12,7 +12,7 @@ FS_BASE_DIR = "/home/vscode/workspace/.tmp/examples/images"
 resources = {
     "dwh_io_manager": IcebergPandasIOManager(
         name="test",
-        config=IcebergSqlCatalogConfig(
+        config=IcebergCatalogConfig(
             properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
         ),
         schema="dagster",

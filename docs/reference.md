@@ -153,15 +153,23 @@ The PyIceberg I/O manager also supports storing and loading PyArrow and Polars D
      You can use `IcebergPandasIOManager` to read and write iceberg tables using Pandas:
 
     ```python title="docs/snippets/io_manager_pandas.py" linenums="1"
-    --8<-- "docs/snippets/io_manager_pyarrow.py"
+    --8<-- "docs/snippets/io_manager_pandas.py"
     ```
 
 === "Polars DataFrames"
 
-     You can use the `IcebergPolarsIOManager` to read and write iceberg tables using Pandas:
+     You can use the `IcebergPolarsIOManager` to read and write iceberg tables using Polars using a full lazily optimized query engine:
 
     ```python title="docs/snippets/io_manager_polars.py" linenums="1"
-    --8<-- "docs/snippets/io_manager_pyarrow.py"
+    --8<-- "docs/snippets/io_manager_polars.py"
+    ```
+
+=== "Daft DataFrames"
+
+     You can use the `IcebergDaftIOManager` to read and write iceberg tables using Daft using a full lazily optimized query engine:
+
+    ```python title="docs/snippets/io_manager_daft.py" linenums="1"
+    --8<-- "docs/snippets/io_manager_daft.py"
     ```
 
 ---
@@ -188,4 +196,93 @@ Use asset metadata to set table properties:
 
 ```python title="docs/snippets/table_properties.py" linenums="1"
 --8<-- "docs/snippets/table_properties.py"
+```
+
+---
+
+## Allowing updates to schema and partitions
+
+By default, assets will error when you change the partition spec (e.g. if you change a partition from hourly to daily) or the schema (e.g. when you add a column). You can allow updates to an asset's partition spec and/or schema by adding the following configuration options to the asset metadata:
+
+```python
+@asset(
+    partitions_def=MultiPartitionsDefinition(
+        {
+            "date": DailyPartitionsDefinition(start_date="2023-01-01"),
+            "species": StaticPartitionDefinition(
+                ["Iris-setosa", "Iris-virginica", "Iris-versicolor"]
+            ),
+        }
+    ),
+    metadata={
+        "partition_expr": {"date": "time", "species": "species"},
+        "partition_spec_update_mode": "update",
+        "schema_update_mode": "update"
+    },
+)
+def iris_dataset_partitioned(context) -> pd.DataFrame:
+    ...
+```
+
+---
+
+## Using the custom DB IO Manager
+
+The `dagster-pyiceberg` library leans heavily on Dagster's `DbIOManager` implementation. This IO manager comes with some limitations, however, such as the lack of support for various [partition mappings](https://docs.dagster.io/_apidocs/partitions#partition-mapping). A custom (experimental) `DbIOManager` implementation is available that supports partition mappings as long as any time-based partition is *consecutive* and static partitions are of string type.
+
+For example, a `MultiToSingleDimensionPartitionMapping` is supported:
+
+```python
+@asset(
+    key_prefix=["my_schema"],
+    partitions_def=daily_partitions_def,
+    ins={
+        "multi_partitioned_asset": AssetIn(
+            ["my_schema", "multi_partitioned_asset_1"],
+            partition_mapping=MultiToSingleDimensionPartitionMapping(
+                partition_dimension_name="date"
+            ),
+        )
+    },
+    metadata={
+        "partition_expr": "date_column",
+    },
+)
+def single_partitioned_asset_date(multi_partitioned_asset: pa.Table) -> pa.Table:
+    ...
+```
+
+But a `SpecificPartitionsPartitionMapping` is not because these dates are not consecutive:
+
+```python
+@asset(
+    partitions_def=multi_partition_with_letter,
+    key_prefix=["my_schema"],
+    metadata={"partition_expr": {"time": "time", "letter": "letter"}},
+    ins={
+        "multi_partitioned_asset": AssetIn(
+            ["my_schema", "multi_partitioned_asset_1"],
+            partition_mapping=MultiPartitionMapping(
+                {
+                    "color": DimensionPartitionMapping(
+                        dimension_name="letter",
+                        partition_mapping=StaticPartitionMapping(
+                            {"blue": "a", "red": "b", "yellow": "c"}
+                        ),
+                    ),
+                    "date": DimensionPartitionMapping(
+                        dimension_name="date",
+                        partition_mapping=SpecificPartitionsPartitionMapping(
+                            ["2022-01-01", "2024-01-01"]
+                        ),
+                    ),
+                }
+            ),
+        )
+    },
+)
+def mapped_multi_partition(
+    context: AssetExecutionContext, multi_partitioned_asset: pa.Table
+) -> pa.Table:
+    ...
 ```
