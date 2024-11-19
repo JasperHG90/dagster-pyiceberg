@@ -43,7 +43,9 @@ class _IcebergCatalogProperties(TypedDict):
 class _IcebergTableIOManagerResourceConfig(TypedDict):
 
     name: str
-    config: _IcebergCatalogProperties
+    config: Optional[_IcebergCatalogProperties]
+    schema_: Optional[str]
+    db_io_manager: DbIoManagerImplementation
     partition_spec_update_mode: PartitionSpecUpdateMode
     schema_update_mode: SchemaUpdateMode
 
@@ -82,9 +84,14 @@ class IcebergDbClient(DbClient):
         resource_config = cast(
             _IcebergTableIOManagerResourceConfig, context.resource_config
         )
-        yield load_catalog(
-            name=resource_config["name"], **resource_config["config"]["properties"]
-        )
+        # Config passed as env variables or using config file.
+        #  See: https://py.iceberg.apache.org/configuration/
+        if resource_config["config"] is None:
+            yield load_catalog(name=resource_config["name"])
+        else:
+            yield load_catalog(
+                name=resource_config["name"], **resource_config["config"]["properties"]
+            )
 
 
 class IcebergIOManager(ConfigurableIOManagerFactory):
@@ -146,8 +153,10 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
     """
 
     name: str = Field(description="The name of the iceberg catalog.")
-    config: IcebergCatalogConfig = Field(
-        description="Additional configuration properties for the iceberg catalog.",
+    config: Optional[IcebergCatalogConfig] = Field(
+        description="Additional configuration properties for the iceberg catalog. See <https://py.iceberg.apache.org/configuration/>"
+        " for passing these as environment variables or using a configuration file.",
+        default=None,
     )
     schema_: Optional[str] = Field(
         default=None,
@@ -177,7 +186,8 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
         return None
 
     def create_io_manager(self, context) -> DbIOManager:
-        self.config.model_dump()
+        if self.config is not None:
+            self.config.model_dump()
         IoManagerImplementation = (
             DbIOManager
             if self.db_io_manager == DbIoManagerImplementation.default
