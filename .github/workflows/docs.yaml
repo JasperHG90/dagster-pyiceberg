@@ -2,8 +2,6 @@ name: deploy-docs
 
 on:
   workflow_dispatch:
-    branches:
-      - main
   release:
     types: [ "published" ]
 
