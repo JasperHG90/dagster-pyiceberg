@@ -1,15 +1,19 @@
-::: dagster_pyiceberg
+## Resources
 
-::: dagster_pyiceberg.io_manager
+::: dagster_pyiceberg.resource.IcebergTableResource
 
-::: dagster_pyiceberg.io_manager.arrow
+## IO Managers
 
-::: dagster_pyiceberg.io_manager.polars
+::: dagster_pyiceberg.io_manager.arrow.IcebergPyarrowIOManager
 
-::: dagster_pyiceberg.io_manager.daft
+::: dagster_pyiceberg.io_manager.polars.IcebergPolarsIOManager
 
-::: dagster_pyiceberg.io_manager.pandas
+::: dagster_pyiceberg.io_manager.daft.IcebergDaftIOManager
 
-::: dagster_pyiceberg.resource
+::: dagster_pyiceberg.io_manager.pandas.IcebergPandasIOManager
+
+## Base classes
 
 ::: dagster_pyiceberg.handler.IcebergBaseTypeHandler
+
+::: dagster_pyiceberg.io_manager.base.IcebergIOManager

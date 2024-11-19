@@ -108,7 +108,7 @@ If you want to store assets in different schemas, you can specify the schema as 
 
 In this example, the `iris_dataset` asset will be stored in the `IRIS` schema, and the `daffodil_dataset` asset will be found in the `DAFFODIL` schema.
 
-!!! info "Installing dagster-pyiceberg-pandas"
+!!! info "Specifying a schema"
 
     The two options for specifying schema are mutually exclusive. If you provide{" "}
     <code>schema</code> configuration to the I/O manager, you cannot also provide
