@@ -27,7 +27,6 @@ def io_manager(
         name=catalog_name,
         config=IcebergCatalogConfig(properties=catalog_config_properties),
         schema=namespace,
-        partition_spec_update_mode="error",
     )
 
 
