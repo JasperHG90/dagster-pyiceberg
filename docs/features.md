@@ -1,5 +1,40 @@
 # Features
 
+## Supported catalog backends
+
+`dagster-pyiceberg` supports all catalog backends that are available through `pyiceberg`. See overview and configuration options [here](https://py.iceberg.apache.org/configuration/#catalogs).
+
+## Configuration
+
+`dagster-pyiceberg` supports setting configuration values using a `.pyiceberg.yaml` configuration file and environment variables. For more information, see the [PyIceberg documentation](https://py.iceberg.apache.org/configuration/#setting-configuration-values).
+
+You may also pass your catalog configuration through use of the `IcebergCatalogConfig` object, e.g:
+
+```python
+from dagster_pyiceberg.config import IcebergCatalogConfig
+from dagster_pyiceberg.io_manager.arrow import IcebergPyarrowIOManager
+
+io_manager = IcebergPyarrowIOManager(
+    name=catalog_name,
+    config=IcebergCatalogConfig(properties={
+        "uri": "postgresql+psycopg2://pyiceberg:pyiceberg@postgres/catalog",
+        "warehouse": f"file://path/to/warehouse",
+    }),
+    schema=namespace,
+)
+```
+
+## Implemented engines
+
+The following engines are currently implemented.
+
+- [arrow](https://arrow.apache.org/docs/python/index.html)
+- [daft](https://www.getdaft.io/)
+- [pandas](https://pandas.pydata.org/)
+- [polars](https://pola.rs/)
+
+## PyIceberg Features
+
 The table below shows which PyIceberg features are currently available.
 
 | Feature | Supported | Link | Comment |
@@ -11,16 +46,3 @@ The table below shows which PyIceberg features are currently available.
 | Partition evolution | ✅ | https://py.iceberg.apache.org/api/#partition-evolution | Create, Update, Delete partitions by updating the Dagster partitions definition. |
 | Table properties | ✅ | https://py.iceberg.apache.org/api/#table-properties | Added as metadata on an asset. NB: config options are not checked explicitly because users can add any key-value pair to a table. Available properties [here](https://py.iceberg.apache.org/configuration/#tables). |
 | Snapshot properties | ✅ | https://py.iceberg.apache.org/api/#snapshot-properties | Useful for correlating Dagster runs to snapshots by adding tags to snapshot. Not configurable by end-user. |
-
-### Supported catalog backends
-
-`dagster-pyiceberg` supports all catalog backends that are available through `pyiceberg`. See overview and configuration options [here](https://py.iceberg.apache.org/configuration/#catalogs).
-
-### Implemented engines
-
-The following engines are currently implemented.
-
-- [arrow](https://arrow.apache.org/docs/python/index.html)
-- [daft](https://www.getdaft.io/)
-- [pandas](https://pandas.pydata.org/)
-- [polars](https://pola.rs/)
