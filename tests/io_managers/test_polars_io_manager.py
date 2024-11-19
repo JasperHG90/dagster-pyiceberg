@@ -26,7 +26,6 @@ def io_manager(
         name=catalog_name,
         config=IcebergCatalogConfig(properties=catalog_config_properties),
         schema=namespace,
-        partition_spec_update_mode="error",
     )
 
 
@@ -61,7 +60,10 @@ def asset_multi_partitioned_table_identifier(namespace: str) -> str:
     return f"{namespace}.multi_partitioned"
 
 
-@asset(key_prefix=["my_schema"])
+@asset(
+    key_prefix=["my_schema"],
+    metadata={"partition_spec_update_mode": "update", "schema_update_mode": "update"},
+)
 def b_df() -> pl.LazyFrame:
     pdf = pl.from_dict({"a": [1, 2, 3], "b": [4, 5, 6]})
     return pdf.lazy()

@@ -35,8 +35,7 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
         connection: Catalog,
     ):
         """Stores pyarrow types in Iceberg table"""
-        metadata = context.definition_metadata or {}  # noqa
-        resource_config = context.resource_config or {}
+        metadata = context.definition_metadata or {}
 
         # NB: not checking properties here, except for protected properties
         table_properties_usr = metadata.get("table_properties", {})
@@ -51,10 +50,8 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
                     f"Table properties cannot contain the following keys: {k}"
                 )
 
-        partition_spec_update_mode = cast(
-            str, resource_config["partition_spec_update_mode"]
-        )
-        schema_update_mode = cast(str, resource_config["schema_update_mode"])
+        partition_spec_update_mode = metadata.get("partition_spec_update_mode", "error")
+        schema_update_mode = metadata.get("schema_update_mode", "error")
 
         table_writer(
             table_slice=table_slice,
