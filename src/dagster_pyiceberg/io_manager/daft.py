@@ -53,29 +53,33 @@ class IcebergDaftIOManager(_io_manager.IcebergIOManager):
     Examples:
         .. code-block:: python
 
+            import daft as da
             import pandas as pd
-            import pyarrow as pa
             from dagster import Definitions, asset
-            from dagster_pyiceberg import IcebergPyarrowIOManager, IcebergSqlCatalogConfig
+
+            from dagster_pyiceberg.config import IcebergCatalogConfig
+            from dagster_pyiceberg.io_manager.daft import IcebergDaftIOManager
 
             CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/select_columns/catalog.db"
             CATALOG_WAREHOUSE = (
                 "file:///home/vscode/workspace/.tmp/examples/select_columns/warehouse"
             )
 
+
             resources = {
-                "io_manager": IcebergPyarrowIOManager(
+                "io_manager": IcebergDaftIOManager(
                     name="test",
-                    config=IcebergSqlCatalogConfig(
+                    config=IcebergCatalogConfig(
                         properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
                     ),
                     schema="dagster",
                 )
             }
 
+
             @asset
-            def iris_dataset() -> pd.DataFrame:
-                pa.Table.from_pandas(
+            def iris_dataset() -> da.DataFrame:
+                return da.from_pandas(
                     pd.read_csv(
                         "https://docs.dagster.io/assets/iris.csv",
                         names=[
@@ -87,6 +91,7 @@ class IcebergDaftIOManager(_io_manager.IcebergIOManager):
                         ],
                     )
                 )
+
 
             defs = Definitions(assets=[iris_dataset], resources=resources)
 

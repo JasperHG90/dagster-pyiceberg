@@ -63,28 +63,32 @@ class IcebergPolarsIOManager(_io_manager.IcebergIOManager):
         .. code-block:: python
 
             import pandas as pd
-            import pyarrow as pa
+            import polars as pl
             from dagster import Definitions, asset
-            from dagster_pyiceberg import IcebergPyarrowIOManager, IcebergSqlCatalogConfig
+
+            from dagster_pyiceberg.config import IcebergCatalogConfig
+            from dagster_pyiceberg.io_manager.polars import IcebergPolarsIOManager
 
             CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/select_columns/catalog.db"
             CATALOG_WAREHOUSE = (
                 "file:///home/vscode/workspace/.tmp/examples/select_columns/warehouse"
             )
 
+
             resources = {
-                "io_manager": IcebergPyarrowIOManager(
+                "io_manager": IcebergPolarsIOManager(
                     name="test",
-                    config=IcebergSqlCatalogConfig(
+                    config=IcebergCatalogConfig(
                         properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
                     ),
                     schema="dagster",
                 )
             }
 
+
             @asset
-            def iris_dataset() -> pd.DataFrame:
-                pa.Table.from_pandas(
+            def iris_dataset() -> pl.DataFrame:
+                return pl.from_pandas(
                     pd.read_csv(
                         "https://docs.dagster.io/assets/iris.csv",
                         names=[
@@ -96,6 +100,7 @@ class IcebergPolarsIOManager(_io_manager.IcebergIOManager):
                         ],
                     )
                 )
+
 
             defs = Definitions(assets=[iris_dataset], resources=resources)
 
