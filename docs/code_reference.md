@@ -8,6 +8,8 @@
 
 ::: dagster_pyiceberg.io_manager.daft
 
+::: dagster_pyiceberg.io_manager.pandas
+
 ::: dagster_pyiceberg.resource
 
 ::: dagster_pyiceberg.handler.IcebergBaseTypeHandler
