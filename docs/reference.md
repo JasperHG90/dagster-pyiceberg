@@ -228,7 +228,20 @@ def iris_dataset_partitioned(context) -> pd.DataFrame:
 
 ## Using the custom DB IO Manager
 
-The `dagster-pyiceberg` library leans heavily on Dagster's `DbIOManager` implementation. This IO manager comes with some limitations, however, such as the lack of support for various [partition mappings](https://docs.dagster.io/_apidocs/partitions#partition-mapping). A custom (experimental) `DbIOManager` implementation is available that supports partition mappings as long as any time-based partition is *consecutive* and static partitions are of string type.
+The `dagster-pyiceberg` library leans heavily on Dagster's `DbIOManager` implementation. This IO manager comes with some limitations, however, such as the lack of support for various [partition mappings](https://docs.dagster.io/_apidocs/partitions#partition-mapping). A custom (experimental) `DbIOManager` implementation is available that supports partition mappings as long as any time-based partition is *consecutive* and static partitions are of string type. You can enable it as follows:
+
+```python
+from dagster_pyiceberg.config import IcebergCatalogConfig
+from dagster_pyiceberg.io_manager.arrow import IcebergPyarrowIOManager
+
+
+IcebergPyarrowIOManager(
+    name="my_catalog",
+    config=IcebergCatalogConfig(properties={...}),
+    schema="my_schema",
+    db_io_manager="custom"
+)
+```
 
 For example, a `MultiToSingleDimensionPartitionMapping` is supported:
 
