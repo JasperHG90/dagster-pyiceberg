@@ -24,4 +24,5 @@ See [Installing dagster-pyiceberg](https://jasperhg90.github.io/dagster-pyiceber
 
 See:
 
-- [example with postgresql catalog backend](https://github.com/JasperHG90/dagster-pyiceberg-example-postgres)
+- [example with postgresql catalog](https://github.com/JasperHG90/dagster-pyiceberg-example-postgres)
+- [example with Polaris catalog](https://github.com/JasperHG90/dagster-pyiceberg-example-polaris)
