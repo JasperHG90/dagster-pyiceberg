@@ -1,3 +1,4 @@
+import logging
 from abc import ABCMeta, abstractmethod
 from typing import Tuple
 
@@ -18,6 +19,9 @@ class PyIcebergOperationWithRetry(metaclass=ABCMeta):
 
     def __init__(self, table: Table):
         self.table = table
+        self.logger = logging.getLogger(
+            f"dagster_pyiceberg._utils.{self.__class__.__name__}"
+        )
 
     @abstractmethod
     def operation(self, *args, **kwargs): ...

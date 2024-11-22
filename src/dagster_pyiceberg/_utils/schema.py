@@ -1,3 +1,4 @@
+import logging
 from functools import cached_property
 from typing import List
 
@@ -16,7 +17,6 @@ def update_table_schema(
         new_table_schema=new_table_schema,
         schema_update_mode=schema_update_mode,
     )
-    new_table_schema.names
 
 
 class PyIcebergSchemaUpdaterWithRetry(PyIcebergOperationWithRetry):
@@ -65,6 +65,9 @@ class IcebergTableSchemaUpdater:
     ):
         self.schema_update_mode = schema_update_mode
         self.schema_differ = schema_differ
+        self.logger = logging.getLogger(
+            "dagster_pyiceberg._utils.schema.IcebergTableSchemaUpdater"
+        )
 
     def update_table_schema(self, table: table.Table):
         if self.schema_update_mode == "error" and self.schema_differ.has_changes:
@@ -76,6 +79,10 @@ class IcebergTableSchemaUpdater:
         else:
             with table.update_schema() as update:
                 for column in self.schema_differ.deleted_columns:
+                    self.logger.debug(f"Deleting column '{column}' from schema")
                     update.delete_column(column)
                 if self.schema_differ.new_columns:
+                    self.logger.debug(
+                        f"Merging schemas with new columns {self.schema_differ.new_columns}"
+                    )
                     update.union_by_name(self.schema_differ.new_table_schema)

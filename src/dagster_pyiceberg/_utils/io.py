@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, List, Optional, Sequence, Union
 
 import pyarrow as pa
@@ -6,7 +7,11 @@ from pyiceberg import __version__ as iceberg_version
 from pyiceberg import expressions as E
 from pyiceberg import table as iceberg_table
 from pyiceberg.catalog import Catalog
-from pyiceberg.exceptions import CommitFailedException, TableAlreadyExistsError
+from pyiceberg.exceptions import (
+    CommitFailedException,
+    NoSuchTableError,
+    TableAlreadyExistsError,
+)
 from pyiceberg.partitioning import PartitionSpec
 from pyiceberg.schema import Schema
 
@@ -14,9 +19,12 @@ from dagster_pyiceberg._utils.partitions import (
     DagsterPartitionToPyIcebergExpressionMapper,
     update_table_partition_spec,
 )
+from dagster_pyiceberg._utils.properties import update_table_properties
 from dagster_pyiceberg._utils.retries import PyIcebergOperationWithRetry
 from dagster_pyiceberg._utils.schema import update_table_schema
 from dagster_pyiceberg.version import __version__ as dagster_pyiceberg_version
+
+logger = logging.getLogger("dagster_pyiceberg._utils.io")
 
 
 def table_writer(
@@ -53,6 +61,9 @@ def table_writer(
         "pyiceberg-version": iceberg_version,
         "dagster-pyiceberg-version": dagster_pyiceberg_version,
     }
+    logger.debug(
+        f"Writing data to table {table_path} with properties {base_properties}"
+    )
     # In practice, partition_dimensions is an empty list for unpartitioned assets and not None
     #  even though it's the default value.
     partition_exprs: List[str] | None = None
@@ -69,8 +80,15 @@ def table_writer(
                 " 'partition_expr' in the asset metadata?"
             )
         partition_dimensions = table_slice.partition_dimensions
-    if catalog.table_exists(table_path):
+    logger.debug(f"Partition dimensions: {partition_dimensions}")
+    if table_exists(catalog, table_path):
+        logger.debug("Updating existing table")
         table = catalog.load_table(table_path)
+        # Check if the table has partition dimensions set
+        num_partition_fields = len(table.spec().fields)
+        logger.debug(
+            f"Current table version has {num_partition_fields} partition fields"
+        )
         # Check if schema matches. If not, update
         update_table_schema(
             table=table,
@@ -78,22 +96,26 @@ def table_writer(
             schema_update_mode=schema_update_mode,
         )
         # Check if partitions match. If not, update
-        if partition_dimensions is not None:
+        if (partition_dimensions is not None) or (num_partition_fields > 0):
             update_table_partition_spec(
-                table=table,
+                # Refresh metadata just in case a partition column was dropped
+                table=table.refresh(),
                 table_slice=table_slice,
                 partition_spec_update_mode=partition_spec_update_mode,
             )
+        if table_properties is not None:
+            update_table_properties(
+                table=table,
+                current_table_properties=table.properties,
+                new_table_properties=table_properties,
+            )
     else:
+        logger.debug("Creating new table")
         table = create_table_if_not_exists(
             catalog=catalog,
             table_path=table_path,
             schema=data.schema,
-            properties=(
-                table_properties | base_properties
-                if table_properties is not None
-                else base_properties
-            ),
+            properties=(table_properties if table_properties is not None else {}),
         )
         if partition_dimensions is not None:
             update_table_partition_spec(
@@ -143,6 +165,27 @@ def get_expression_row_filter(
         if len(partition_filters) > 1
         else partition_filters[0]
     )
+
+
+def table_exists(catalog: Catalog, table_path: str) -> bool:
+    """Checks if a table exists in the iceberg catalog
+
+    NB: This is custom logic because for some reason, the PyIceberg REST implementation
+    doesn't seem to work properly for catalog.table_exists(table_path). This is a workaround
+    so that users don't run into strange issues when updating an existing table.
+
+    Args:
+        catalog (Catalog): PyIceberg catalogs supported by this library
+        table_path (str): Table path
+
+    Returns:
+        bool: True if the table exists, False otherwise
+    """
+    try:
+        catalog.load_table(table_path)
+        return True
+    except NoSuchTableError:
+        return False
 
 
 def create_table_if_not_exists(
@@ -225,6 +268,7 @@ class PyIcebergTableOverwriterWithRetry(PyIcebergOperationWithRetry):
         overwrite_filter: Union[E.BooleanExpression, str],
         snapshot_properties: Optional[Dict[str, str]] = None,
     ):
+        self.logger.debug(f"Overwriting table with filter: {overwrite_filter}")
         self.table.overwrite(
             df=data,
             overwrite_filter=overwrite_filter,
