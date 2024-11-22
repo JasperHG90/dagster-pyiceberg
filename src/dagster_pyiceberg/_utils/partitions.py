@@ -1,5 +1,6 @@
 import datetime as dt
 import itertools
+import logging
 from abc import abstractmethod
 from typing import (
     Dict,
@@ -227,6 +228,7 @@ def update_table_partition_spec(
 class PyIcebergPartitionSpecUpdaterWithRetry(PyIcebergOperationWithRetry):
 
     def operation(self, table_slice: TableSlice, partition_spec_update_mode: str):
+        self.logger.debug("Updating table partition spec")
         IcebergTableSpecUpdater(
             partition_mapping=PartitionMapper(
                 table_slice=table_slice,
@@ -399,7 +401,9 @@ class PartitionMapper:
         """Retrieve partition dimensions that are not yet present in the iceberg table."""
         return [
             p
-            for p in self.get_table_slice_partition_dimensions()
+            for p in self.get_table_slice_partition_dimensions(
+                allow_empty_dagster_partitions=True
+            )
             if p.partition_expr in self.new_partition_field_names
         ]
 
@@ -407,7 +411,9 @@ class PartitionMapper:
         """Retrieve partition dimensions that have been updated."""
         return [
             p
-            for p in self.get_table_slice_partition_dimensions()
+            for p in self.get_table_slice_partition_dimensions(
+                allow_empty_dagster_partitions=True
+            )
             if p.partition_expr == self.updated_dagster_time_partition_field
         ]
 
@@ -429,6 +435,9 @@ class IcebergTableSpecUpdater:
     ):
         self.partition_spec_update_mode = partition_spec_update_mode
         self.partition_mapping = partition_mapping
+        self.logger = logging.getLogger(
+            "dagster_pyiceberg._utils.partitions.IcebergTableSpecUpdater"
+        )
 
     def _changes(
         self,
@@ -444,6 +453,7 @@ class IcebergTableSpecUpdater:
         self._spec_new(update=update, partition=partition)
 
     def _spec_delete(self, update: UpdateSpec, partition_name: str):
+        self.logger.debug("Removing partition column: %s", partition_name)
         update.remove_field(name=partition_name)
 
     def _spec_new(self, update: UpdateSpec, partition: TablePartitionDimension):
@@ -451,6 +461,8 @@ class IcebergTableSpecUpdater:
             transform = diff_to_transformation(*partition.partitions)
         else:
             transform = IdentityTransform()
+        self.logger.debug("Setting new partition column: %s", partition.partition_expr)
+        self.logger.debug("Using transform: %s", transform)
         update.add_field(
             source_column_name=partition.partition_expr,
             transform=transform,
