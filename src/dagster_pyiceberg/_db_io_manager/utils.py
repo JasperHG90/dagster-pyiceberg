@@ -17,6 +17,13 @@ from dagster_pyiceberg._utils.transforms import date_diff
 class MultiTimePartitionsChecker:
 
     def __init__(self, partitions: List[TimeWindow]):
+        """Helper class that defines checks on a list of TimeWindow objects
+        most importantly, partitions should be consecutive.
+
+        Args:
+            partitions (List[TimeWindow]): List of TimeWindow objects
+        """
+
         self._partitions = partitions
 
     @property
@@ -74,6 +81,23 @@ def generate_multi_partitions_dimension(
     partition_expr: Mapping[str, str],
     asset_key: AssetKey,
 ) -> List[TablePartitionDimension]:
+    """Given a MultiPartitionsDefinition, generate a list of TablePartitionDimension objects that can be
+    used to create a TableSlice object.
+
+    Args:
+        asset_partition_keys (Sequence[str]): Partition keys for the asset
+        asset_partitions_def (MultiPartitionsDefinition): The PartitionDefinition object for the asset
+        partition_expr (Mapping[str, str]): The partition expression for the asset partition
+        asset_key (AssetKey): The AssetKey for the asset that is being stored
+
+    Raises:
+        ValueError: If the asset has a partition but the partition_expr metadata does not contain a key for the partition
+        ValueError: If the dates for a TimeWindow partition are not consecutive
+        ValueError: If the partition type is unknown
+
+    Returns:
+        List[TablePartitionDimension]: List of TablePartitionDimension objects
+    """
     partition_dimensions: List[TablePartitionDimension] = []
     multi_partition_key_mappings = [
         cast(MultiPartitionKey, partition_key).keys_by_dimension
@@ -127,6 +151,16 @@ def generate_single_partition_dimension(
     asset_partition_keys: Sequence[str],
     asset_partitions_time_window: TimeWindow | None,
 ) -> TablePartitionDimension:
+    """Given a single partition, generate a TablePartitionDimension object that can be used to create a TableSlice object.
+
+    Args:
+        partition_expr (str): Partition expression for the asset partition
+        asset_partition_keys (Sequence[str]): Partition keys for the asset
+        asset_partitions_time_window (TimeWindow | None): TimeWindow object for the asset partition
+
+    Returns:
+        TablePartitionDimension: TablePartitionDimension object
+    """
     partition_dimension: TablePartitionDimension
     if isinstance(asset_partitions_time_window, TimeWindow):
         partition_dimension = TablePartitionDimension(
