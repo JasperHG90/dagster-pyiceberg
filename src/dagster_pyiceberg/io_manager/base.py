@@ -149,7 +149,8 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
     If you do not provide a schema, Dagster will determine a schema based on the assets and ops using
     the I/O Manager. For assets, the schema will be determined from the asset key, as in the above example.
     For ops, the schema can be specified by including a "schema" entry in output metadata. If none
-    of these is provided, the schema will default to "public".
+    of these is provided, the schema will default to "public". The I/O manager will check if the namespace
+    exists in the iceberg catalog. It does not automatically create the namespace if it does not exist.
 
     ```python
     @op(

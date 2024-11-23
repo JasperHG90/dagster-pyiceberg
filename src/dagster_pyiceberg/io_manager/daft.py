@@ -50,8 +50,6 @@ class _IcebergDaftTypeHandler(_handler.IcebergBaseTypeHandler[da.DataFrame]):
 class IcebergDaftIOManager(_io_manager.IcebergIOManager):
     """An IO manager definition that reads inputs from and writes outputs to Iceberg tables using Daft.
 
-    NB: you need to use the 'schema' input to specify the *namespace* of the pyiceberg table.
-
     Examples:
 
     ```python
@@ -74,7 +72,7 @@ class IcebergDaftIOManager(_io_manager.IcebergIOManager):
             config=IcebergCatalogConfig(
                 properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
             ),
-            schema="dagster",
+            namespace="dagster",
         )
     }
 
@@ -101,7 +99,8 @@ class IcebergDaftIOManager(_io_manager.IcebergIOManager):
     If you do not provide a schema, Dagster will determine a schema based on the assets and ops using
     the I/O Manager. For assets, the schema will be determined from the asset key, as in the above example.
     For ops, the schema can be specified by including a "schema" entry in output metadata. If none
-    of these is provided, the schema will default to "public".
+    of these is provided, the schema will default to "public". The I/O manager will check if the namespace
+    exists in the iceberg catalog. It does not automatically create the namespace if it does not exist.
 
     ```python
     @op(
