@@ -15,7 +15,7 @@ resources = {
         config=IcebergCatalogConfig(
             properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
         ),
-        schema="dagster",
+        namespace="dagster",
     ),
     "blob_io_manager": FilesystemIOManager(base_dir=FS_BASE_DIR),
 }

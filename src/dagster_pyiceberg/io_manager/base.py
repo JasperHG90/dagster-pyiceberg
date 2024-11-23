@@ -60,7 +60,8 @@ class IcebergDbClient(DbClient):
     @staticmethod
     def ensure_schema_exists(
         context: OutputContext, table_slice: TableSlice, connection: Catalog
-    ) -> None: ...
+    ) -> None:
+        connection.list_namespaces(table_slice.schema)
 
     @staticmethod
     def get_select_statement(table_slice: TableSlice) -> str:
@@ -148,7 +149,8 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
     If you do not provide a schema, Dagster will determine a schema based on the assets and ops using
     the I/O Manager. For assets, the schema will be determined from the asset key, as in the above example.
     For ops, the schema can be specified by including a "schema" entry in output metadata. If none
-    of these is provided, the schema will default to "public".
+    of these is provided, the schema will default to "public". The I/O manager will check if the namespace
+    exists in the iceberg catalog. It does not automatically create the namespace if it does not exist.
 
     ```python
     @op(
@@ -179,7 +181,7 @@ class IcebergIOManager(ConfigurableIOManagerFactory):
     )
     schema_: Optional[str] = Field(
         default=None,
-        alias="schema",
+        alias="namespace",
         description="Name of the iceberg catalog namespace to use.",
     )  # schema is a reserved word for pydantic
     db_io_manager: DbIoManagerImplementation = Field(

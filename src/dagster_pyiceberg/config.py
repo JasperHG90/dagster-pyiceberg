@@ -30,7 +30,7 @@ class IcebergCatalogConfig(Config):
             "uri": f"sqlite:///{warehouse_path}/pyiceberg_catalog.db",
             "warehouse": f"file://{warehouse_path}",
         }),
-        schema=namespace,
+        namespace=namespace,
     )
     ```
     """

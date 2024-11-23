@@ -16,7 +16,7 @@ resources = {
         config=IcebergCatalogConfig(
             properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
         ),
-        schema="dagster",
+        namespace="dagster",
     )
 }
 

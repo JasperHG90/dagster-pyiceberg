@@ -25,7 +25,7 @@ def io_manager(
     return IcebergPolarsIOManager(
         name=catalog_name,
         config=IcebergCatalogConfig(properties=catalog_config_properties),
-        schema=namespace,
+        namespace=namespace,
     )
 
 

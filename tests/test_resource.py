@@ -49,7 +49,7 @@ def pyiceberg_table_resource(
     return IcebergTableResource(
         name=catalog_name,
         config=IcebergCatalogConfig(properties=catalog_config_properties),
-        schema=namespace,
+        namespace=namespace,
         table=table_name,
     )
 
