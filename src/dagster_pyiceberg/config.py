@@ -7,7 +7,7 @@ class IcebergCatalogConfig(Config):
     """Configuration for Iceberg Catalogs. See <https://py.iceberg.apache.org/configuration/#catalogs>
     for configuration options.
 
-    You can configure the PyIceberg IO manager using:
+    You can configure the PyIceberg IO manager:
 
         1. Using a `.pyiceberg.yaml` configuration file.
         2. Through environment variables.
