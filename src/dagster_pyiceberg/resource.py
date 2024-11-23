@@ -49,7 +49,7 @@ class IcebergTableResource(ConfigurableResource):
     schema_: Optional[str] = Field(
         default=None,
         alias="schema",
-        description="Name of the iceberg catalog schema to use.",
+        description="Name of the iceberg catalog namespace to use.",
     )  # schema is a reserved word for pydantic
     snapshot_id: Optional[int] = Field(
         default=None,
