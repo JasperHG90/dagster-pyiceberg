@@ -98,8 +98,6 @@ class IcebergDbClient(DbClient):
 class IcebergIOManager(ConfigurableIOManagerFactory):
     """Base class for an IO manager definition that reads inputs from and writes outputs to Iceberg tables.
 
-    NB: you need to use the 'schema' input to specify the *namespace* of the pyiceberg table.
-
     Examples:
 
     ```python

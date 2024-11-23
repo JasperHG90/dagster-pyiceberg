@@ -59,8 +59,6 @@ class _IcebergPolarsTypeHandler(
 class IcebergPolarsIOManager(_io_manager.IcebergIOManager):
     """An IO manager definition that reads inputs from and writes outputs to Iceberg tables using Polars.
 
-    NB: you need to use the 'schema' input to specify the *namespace* of the pyiceberg table.
-
     Examples:
 
     ```python

@@ -43,8 +43,6 @@ class _IcebergPandasTypeHandler(_IcebergPyArrowTypeHandler):
 class IcebergPandasIOManager(_io_manager.IcebergIOManager):
     """An IO manager definition that reads inputs from and writes outputs to Iceberg tables using Pandas.
 
-    NB: you need to use the 'schema' input to specify the *namespace* of the pyiceberg table.
-
     Examples:
 
     ```python
