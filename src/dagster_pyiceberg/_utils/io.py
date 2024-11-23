@@ -111,7 +111,7 @@ def table_writer(
             )
     else:
         logger.debug("Creating new table")
-        table = create_table_if_not_exists(
+        table = create_table(
             catalog=catalog,
             table_path=table_path,
             schema=data.schema,
@@ -188,7 +188,7 @@ def table_exists(catalog: Catalog, table_path: str) -> bool:
         return False
 
 
-def create_table_if_not_exists(
+def create_table(
     catalog: Catalog,
     table_path: str,
     schema: pa.Schema,
@@ -205,7 +205,7 @@ def create_table_if_not_exists(
     Raises:
         RetryError: Raised when the commit fails after the maximum number of retries
     """
-    PyIcebergCreateTableIfNotExistsWithRetry(catalog=catalog).execute(
+    PyIcebergCreateTableWithRetry(catalog=catalog).execute(
         retries=3,
         exception_types=(CommitFailedException, TableAlreadyExistsError),
         table_path=table_path,
@@ -215,7 +215,7 @@ def create_table_if_not_exists(
     return catalog.load_table(table_path)
 
 
-class PyIcebergCreateTableIfNotExistsWithRetry(PyIcebergOperationWithRetry):
+class PyIcebergCreateTableWithRetry(PyIcebergOperationWithRetry):
 
     def __init__(self, catalog: Catalog):
         self.catalog = catalog
@@ -225,7 +225,7 @@ class PyIcebergCreateTableIfNotExistsWithRetry(PyIcebergOperationWithRetry):
         ...
 
     def operation(self, table_path: str, schema: pa.Schema, properties: Dict[str, str]):
-        self.catalog.create_table_if_not_exists(
+        self.catalog.create_table(
             table_path,
             schema=schema,
             properties=properties,
