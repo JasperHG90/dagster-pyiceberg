@@ -25,7 +25,7 @@ defs = Definitions(
             config=IcebergCatalogConfig(
                 properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
             ),
-            schema="dagster",
+            namespace="dagster",
             table="ingested_data",
         )
     },
