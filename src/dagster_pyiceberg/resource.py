@@ -12,25 +12,31 @@ class IcebergTableResource(ConfigurableResource):
     """Resource for interacting with a PyIceberg table.
 
     Examples:
-        .. code-block:: python
 
-            from dagster import Definitions, asset
-            from dagster_pyiceberg import PyIcebergTableResource, LocalConfig
+    ```python
+    from dagster import Definitions, asset
+    from dagster_pyiceberg import PyIcebergTableResource, LocalConfig
 
-            @asset
-            def my_table(pyiceberg_table: PyIcebergTableResource):
-                df = pyiceberg_table.load().to_pandas()
+    @asset
+    def my_table(pyiceberg_table: PyIcebergTableResource):
+        df = pyiceberg_table.load().to_pandas()
 
-            defs = Definitions(
-                assets=[my_table],
-                resources={
-                    "pyiceberg_table,
-                    PyIcebergTableResource(
-                        url="/path/to/table",
-                        storage_options=LocalConfig()
-                    )
-                }
+    defs = Definitions(
+        assets=[my_table],
+        resources={
+            "pyiceberg_table,
+            PyIcebergTableResource(
+                name="mycatalog",
+                schema="mynamespace",
+                table="mytable",
+                config=IcebergCatalogConfig(properties={
+                    "uri": f"sqlite:///{warehouse_path}/pyiceberg_catalog.db",
+                    "warehouse": f"file://{warehouse_path}",
+                }),
             )
+        }
+    )
+    ```
     """
 
     name: str = Field(description="The name of the iceberg catalog.")
