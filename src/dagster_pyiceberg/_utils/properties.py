@@ -11,6 +11,7 @@ from dagster_pyiceberg._utils.retries import PyIcebergOperationWithRetry
 def update_table_properties(
     table: table.Table, current_table_properties: dict, new_table_properties: dict
 ):
+    """Update existing table properties with new table properties passed by user"""
     PyIcebergPropertiesUpdaterWithRetry(table=table).execute(
         retries=3,
         exception_types=CommitFailedException,
@@ -22,6 +23,7 @@ def update_table_properties(
 class PyIcebergPropertiesUpdaterWithRetry(PyIcebergOperationWithRetry):
 
     def operation(self, current_table_properties: dict, new_table_properties: dict):
+        """Diffs current and new properties and updates where relevant"""
         IcebergTablePropertiesUpdater(
             table_properties_differ=TablePropertiesDiffer(
                 current_table_properties=current_table_properties,
@@ -33,6 +35,13 @@ class PyIcebergPropertiesUpdaterWithRetry(PyIcebergOperationWithRetry):
 class TablePropertiesDiffer:
 
     def __init__(self, current_table_properties: dict, new_table_properties: dict):
+        """Helper class to diff current and new table properties
+
+        Args:
+            current_table_properties (dict): Dictionary of current table properties retrieve from pyiceberg Table
+            new_table_properties (dict): Dictionary of new table properties passed by user
+        """
+
         self.current_table_properties = current_table_properties
         self.new_table_properties = new_table_properties
 
@@ -89,6 +98,12 @@ class IcebergTablePropertiesUpdater:
         return self.table_properties_differ.deleted_properties
 
     def update_table_properties(self, table: table.Table, table_properties: dict):
+        """Updates Iceberg Table properties
+
+        Args:
+            table (table.Table): Pyiceberg Table
+            table_properties (dict): New or updated table properties that
+        """
         if not self.table_properties_differ.has_changes:
             return
         else:
