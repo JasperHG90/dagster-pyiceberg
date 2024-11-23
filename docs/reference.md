@@ -238,7 +238,7 @@ from dagster_pyiceberg.io_manager.arrow import IcebergPyarrowIOManager
 IcebergPyarrowIOManager(
     name="my_catalog",
     config=IcebergCatalogConfig(properties={...}),
-    schema="my_schema",
+    namespace="my_schema",
     db_io_manager="custom"
 )
 ```

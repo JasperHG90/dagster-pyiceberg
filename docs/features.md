@@ -20,7 +20,7 @@ io_manager = IcebergPyarrowIOManager(
         "uri": "postgresql+psycopg2://pyiceberg:pyiceberg@postgres/catalog",
         "warehouse": f"file://path/to/warehouse",
     }),
-    schema=namespace,
+    namespace=namespace,
 )
 ```
 
