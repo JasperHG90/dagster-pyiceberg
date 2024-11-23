@@ -60,7 +60,8 @@ class IcebergDbClient(DbClient):
     @staticmethod
     def ensure_schema_exists(
         context: OutputContext, table_slice: TableSlice, connection: Catalog
-    ) -> None: ...
+    ) -> None:
+        connection.list_namespaces(table_slice.schema)
 
     @staticmethod
     def get_select_statement(table_slice: TableSlice) -> str:

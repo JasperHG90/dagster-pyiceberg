@@ -27,7 +27,7 @@ class IcebergTableResource(ConfigurableResource):
             "pyiceberg_table,
             PyIcebergTableResource(
                 name="mycatalog",
-                schema="mynamespace",
+                namespace="mynamespace",
                 table="mytable",
                 config=IcebergCatalogConfig(properties={
                     "uri": f"sqlite:///{warehouse_path}/pyiceberg_catalog.db",

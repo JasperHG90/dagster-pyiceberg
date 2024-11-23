@@ -84,10 +84,15 @@ def catalog(catalog_name: str, catalog_config_properties: Dict[str, str]) -> Cat
     )
 
 
-@pytest.fixture(scope="function", autouse=True)
-def namespace(catalog: Catalog) -> str:
-    catalog.create_namespace("pytest")
+@pytest.fixture(scope="session")
+def namespace_name() -> str:
     return "pytest"
+
+
+@pytest.fixture(scope="function", autouse=True)
+def namespace(catalog: Catalog, namespace_name: str) -> str:
+    catalog.create_namespace(namespace_name)
+    return namespace_name
 
 
 @pytest.fixture(scope="session")
