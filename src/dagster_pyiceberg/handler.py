@@ -37,19 +37,7 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
         """Stores pyarrow types in Iceberg table"""
         metadata = context.definition_metadata or {}
 
-        # NB: not checking properties here, except for protected properties
         table_properties_usr = metadata.get("table_properties", {})
-        for k, _ in table_properties_usr.items():
-            if k in [
-                "created-by",
-                "run-id",
-                "dagster-pyiceberg-version",
-                "pyiceberg-version",
-            ]:
-                raise KeyError(
-                    f"Table properties cannot contain the following keys: {k}"
-                )
-
         partition_spec_update_mode = metadata.get("partition_spec_update_mode", "error")
         schema_update_mode = metadata.get("schema_update_mode", "error")
 
@@ -90,7 +78,7 @@ class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
         table_slice: TableSlice,
         connection: Catalog,
     ) -> U:
-        """Loads the input using a dataframe implmentation"""
+        """Loads the input using a dataframe implementation"""
         return self.to_data_frame(
             table=connection.load_table(f"{table_slice.schema}.{table_slice.table}"),
             table_slice=table_slice,
