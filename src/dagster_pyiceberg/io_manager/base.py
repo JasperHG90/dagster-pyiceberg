@@ -97,59 +97,78 @@ class IcebergDbClient(DbClient):
 class IcebergIOManager(ConfigurableIOManagerFactory):
     """Base class for an IO manager definition that reads inputs from and writes outputs to Iceberg tables.
 
+    NB: you need to use the 'schema' input to specify the *namespace* of the pyiceberg table.
+
     Examples:
-        .. code-block:: python
 
-            from dagster_pyiceberg import IcebergIOManager, IcebergSqlCatalogConfig
-            from dagster_pyiceberg_pandas import IcebergPandasTypeHandler
-            from dagster._core.storage.db_io_manager import DbTypeHandler
+    ```python
+    import pandas as pd
+    import pyarrow as pa
+    from dagster import Definitions, asset
 
-            class MyIcebergLakeIOManager(IcebergIOManager):
-                @staticmethod
-                def type_handlers() -> Sequence[DbTypeHandler]:
-                    return [IcebergPandasTypeHandler()]
+    from dagster_pyiceberg.config import IcebergCatalogConfig
+    from dagster_pyiceberg.io_manager.arrow import IcebergPyarrowIOManager
 
-            @asset(
-                key_prefix=["my_schema"]  # will be used as the schema (parent folder) in the iceberg catalog
+    CATALOG_URI = "sqlite:////home/vscode/workspace/.tmp/examples/select_columns/catalog.db"
+    CATALOG_WAREHOUSE = (
+        "file:///home/vscode/workspace/.tmp/examples/select_columns/warehouse"
+    )
+
+
+    resources = {
+        "io_manager": IcebergPyarrowIOManager(
+            name="test",
+            config=IcebergCatalogConfig(
+                properties={"uri": CATALOG_URI, "warehouse": CATALOG_WAREHOUSE}
+            ),
+            schema="dagster",
+        )
+    }
+
+
+    @asset
+    def iris_dataset() -> pa.Table:
+        pa.Table.from_pandas(
+            pd.read_csv(
+                "https://docs.dagster.io/assets/iris.csv",
+                names=[
+                    "sepal_length_cm",
+                    "sepal_width_cm",
+                    "petal_length_cm",
+                    "petal_width_cm",
+                    "species",
+                ],
             )
-            def my_table() -> pd.DataFrame:  # the name of the asset will be the table name
-                ...
+        )
 
-            defs = Definitions(
-                assets=[my_table],
-                resources={"io_manager": MyIcebergLakeIOManager(
-                    name="my_iceberg_lake",
-                    config=IcebergSqlCatalogConfig(
-                        properties={"uri": <SQL-URI>, "warehouse": <WAREHOUSE-LOCATION>}
-                    ),
-                )},
-            )
+
+    defs = Definitions(assets=[iris_dataset], resources=resources)
+    ```
 
     If you do not provide a schema, Dagster will determine a schema based on the assets and ops using
     the I/O Manager. For assets, the schema will be determined from the asset key, as in the above example.
     For ops, the schema can be specified by including a "schema" entry in output metadata. If none
     of these is provided, the schema will default to "public".
 
-    .. code-block:: python
-
-        @op(
-            out={"my_table": Out(metadata={"schema": "my_schema"})}
-        )
-        def make_my_table() -> pd.DataFrame:
-            ...
+    ```python
+    @op(
+        out={"my_table": Out(metadata={"schema": "my_schema"})}
+    )
+    def make_my_table() -> pd.DataFrame:
+        ...
+    ```
 
     To only use specific columns of a table as input to a downstream op or asset, add the metadata "columns" to the
     In or AssetIn.
 
-    .. code-block:: python
-
-        @asset(
-            ins={"my_table": AssetIn("my_table", metadata={"columns": ["a"]})}
-        )
-        def my_table_a(my_table: pd.DataFrame):
-            # my_table will just contain the data from column "a"
-            ...
-
+    ```python
+    @asset(
+        ins={"my_table": AssetIn("my_table", metadata={"columns": ["a"]})}
+    )
+    def my_table_a(my_table: pd.DataFrame):
+        # my_table will just contain the data from column "a"
+        ...
+    ```
     """
 
     name: str = Field(description="The name of the iceberg catalog.")
