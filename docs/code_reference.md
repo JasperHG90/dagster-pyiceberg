@@ -2,6 +2,10 @@
 
 ::: dagster_pyiceberg.resource.IcebergTableResource
 
+## Configuration
+
+::: dagster_pyiceberg.config.IcebergCatalogConfig
+
 ## IO Managers
 
 ::: dagster_pyiceberg.io_manager.arrow.IcebergPyarrowIOManager
