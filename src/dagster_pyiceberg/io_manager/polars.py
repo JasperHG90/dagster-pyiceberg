@@ -7,6 +7,7 @@ except ImportError as e:
         "Please install dagster-pyiceberg with the 'polars' extra."
     ) from e
 import pyarrow as pa
+from dagster._annotations import experimental, public
 from dagster._core.storage.db_io_manager import DbTypeHandler, TableSlice
 from pyiceberg import table as ibt
 
@@ -56,6 +57,8 @@ class _IcebergPolarsTypeHandler(
         return (pl.LazyFrame, pl.DataFrame)
 
 
+@experimental
+@public
 class IcebergPolarsIOManager(_io_manager.IcebergIOManager):
     """An IO manager definition that reads inputs from and writes outputs to Iceberg tables using Polars.
 

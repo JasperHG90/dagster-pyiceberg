@@ -1,6 +1,7 @@
 from typing import Optional
 
 from dagster import ConfigurableResource
+from dagster._annotations import experimental, public
 from pydantic import Field
 from pyiceberg.catalog import load_catalog
 from pyiceberg.table import Table
@@ -8,6 +9,8 @@ from pyiceberg.table import Table
 from dagster_pyiceberg.config import IcebergCatalogConfig
 
 
+@public
+@experimental
 class IcebergTableResource(ConfigurableResource):
     """Resource for interacting with a PyIceberg table.
 

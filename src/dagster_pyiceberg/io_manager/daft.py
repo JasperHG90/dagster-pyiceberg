@@ -5,6 +5,7 @@ try:
 except ImportError as e:
     raise ImportError("Please install dagster-pyiceberg with the 'daft' extra.") from e
 import pyarrow as pa
+from dagster._annotations import experimental, public
 from dagster._core.storage.db_io_manager import DbTypeHandler, TableSlice
 from pyiceberg import table as ibt
 
@@ -47,6 +48,8 @@ class _IcebergDaftTypeHandler(_handler.IcebergBaseTypeHandler[da.DataFrame]):
         return [da.DataFrame]
 
 
+@experimental
+@public
 class IcebergDaftIOManager(_io_manager.IcebergIOManager):
     """An IO manager definition that reads inputs from and writes outputs to Iceberg tables using Daft.
 

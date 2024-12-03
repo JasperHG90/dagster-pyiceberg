@@ -1,8 +1,10 @@
 from typing import Any, Dict
 
 from dagster import Config
+from dagster._annotations import public
 
 
+@public
 class IcebergCatalogConfig(Config):
     """Configuration for Iceberg Catalogs. See <https://py.iceberg.apache.org/configuration/#catalogs>
     for configuration options.

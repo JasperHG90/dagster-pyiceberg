@@ -1,6 +1,7 @@
 from typing import Sequence, Tuple, Type, Union
 
 import pyarrow as pa
+from dagster._annotations import experimental, public
 from dagster._core.storage.db_io_manager import DbTypeHandler, TableSlice
 from pyiceberg import expressions as E
 from pyiceberg import table as ibt
@@ -48,6 +49,8 @@ class _IcebergPyArrowTypeHandler(_handler.IcebergBaseTypeHandler[ArrowTypes]):
         return (pa.Table, pa.RecordBatchReader)
 
 
+@experimental
+@public
 class IcebergPyarrowIOManager(_io_manager.IcebergIOManager):
     """An IO manager definition that reads inputs from and writes outputs to Iceberg tables using PyArrow.
 

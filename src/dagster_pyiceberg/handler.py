@@ -3,6 +3,7 @@ from typing import Generic, TypeVar, Union, cast
 
 import pyarrow as pa
 from dagster import InputContext, MetadataValue, OutputContext, TableColumn, TableSchema
+from dagster._annotations import experimental, public
 from dagster._core.storage.db_io_manager import DbTypeHandler, TableSlice
 from pyiceberg import table as ibt
 from pyiceberg.catalog import Catalog
@@ -15,6 +16,8 @@ U = TypeVar("U")
 ArrowTypes = Union[pa.Table, pa.RecordBatchReader]
 
 
+@experimental
+@public
 class IcebergBaseTypeHandler(DbTypeHandler[U], Generic[U]):
 
     @abstractmethod
