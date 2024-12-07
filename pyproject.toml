@@ -97,6 +97,7 @@ extend-exclude = [
 cache_dir = "/home/vscode/workspace/.cache/pytest"
 
 [tool.pyright]
+exclude = [".venv", ".github", "docs", "tests"]
 include = ["src"]
 pythonVersion = "3.11"
 venvPath = "."
