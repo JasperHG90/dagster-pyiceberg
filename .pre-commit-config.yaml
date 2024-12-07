@@ -3,7 +3,7 @@
 repos:
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: check-ast
       - id: check-docstring-first
@@ -15,7 +15,7 @@ repos:
       - id: trailing-whitespace
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.5.4
+    rev: 0.5.7
     hooks:
       - id: uv-lock
 
@@ -26,12 +26,12 @@ repos:
         args: [-vv, --fail-under=0, ./src]
 
   - repo: https://github.com/ambv/black
-    rev: 24.1.1
+    rev: 24.10.0
     hooks:
       - id: black
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.2.1
+    rev: v0.8.2
     hooks:
       - id: ruff
 
