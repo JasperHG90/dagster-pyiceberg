@@ -115,7 +115,7 @@ def generate_multi_partitions_dimension(
                 partitions.append(partition_key)
 
         partition_expr_str = partition_expr.get(part.name)
-        if partition_expr is None:
+        if partition_expr_str is None:
             raise ValueError(
                 f"Asset '{asset_key}' has partition {part.name}, but the"
                 f" 'partition_expr' metadata does not contain a {part.name} entry,"
