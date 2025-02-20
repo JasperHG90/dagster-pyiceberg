@@ -1,28 +1,5 @@
-![dagster-pyiceberg](docs/assets/dagster-pyiceberg-main.png)
+# README
 
-> ⚠️ This project is in beta
+This repository has been moved to the [dagster community integrations](https://github.com/dagster-io/community-integrations) repository. The code in this repository is no longer actively maintained. Please migrate to the `dagster-iceberg` library that will soon be published on PyPi.
 
-[Dagster](https://dagster.io/) IO manager for managing [Iceberg](https://iceberg.apache.org/) tables with [PyIceberg](https://github.com/apache/iceberg-python).
-
-## Examples
-
-See:
-
-- [example with postgresql catalog](https://github.com/JasperHG90/dagster-pyiceberg-example-postgres)
-- [example with Polaris catalog](https://github.com/JasperHG90/dagster-pyiceberg-example-polaris)
-
-## Installation
-
-See [Installing dagster-pyiceberg](https://jasperhg90.github.io/dagster-pyiceberg/installation/).
-
-## Documentation
-
-Documentation can be found [here](https://jasperhg90.github.io/dagster-pyiceberg/).
-
-## Features
-
-Available features can be found [here](https://jasperhg90.github.io/dagster-pyiceberg/features/).
-
-## Status
-
-This library is currently in development and has beta status.
+Thank you!
